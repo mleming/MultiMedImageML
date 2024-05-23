@@ -6,5 +6,3 @@ The Multi-Input Medical Image Machine Learning Toolkit (MultiMedImageML) is a li
 To install Multi Med Image ML, simply type into a standard UNIX terminal
 
     pip install multi-med-image-ml
-
-And follow the example script.
