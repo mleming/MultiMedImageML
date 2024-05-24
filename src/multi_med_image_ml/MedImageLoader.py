@@ -19,7 +19,7 @@ from DataBaseWrapper import DataBaseWrapper
 class MedImageLoader():
 	def __init__(self,*image_folders,
 			pandas_cache = '../pandas/',
-			cache = False,
+			cache = True,
 			path_func = None,
 			batch_by_pid=True,
 			return_as_patient_record=False,
@@ -63,6 +63,7 @@ class MedImageLoader():
 		self.forcealt = forcealt
 		self.Y_dim = Y_dim
 		self.C_dim = C_dim
+		self.mode = None
 		
 		# Stores images so that they aren't repeated in different stacks
 		self.image_dict = {}
@@ -79,20 +80,22 @@ class MedImageLoader():
 		# Create or read in the image database
 		if self.pickle_input():
 			self.all_vars_file = self.image_folders[0]
-			assert(self.cache or os.path.isfile(self.all_vars_file))
+			#assert(self.cache or os.path.isfile(self.all_vars_file))
 		else:
 			os.makedirs(os.path.dirname(self.pandas_cache),
 				exist_ok=True)
 			self.all_vars_file = os.path.join(
 				self.pandas_cache,
-				"all_vars_%s.pkl" % get_dim_str(dim=self.dim))		
-		if self.batch_by_pid and not os.path.isfile(self.all_vars_file):
-			warnings.warn("Must have working all vars file to group files. One once without group_by set")
+				"all_vars_%s.pkl" % get_dim_str(dim=self.dim))
+		
 		self.all_vars = DataBaseWrapper(
 					filename=self.all_vars_file,
 					labels=self.label,
 					confounds=self.confounds,
 					dim=self.dim)
+		if not self.pickle_input():
+			self.build_pandas_database()
+		self.all_vars.build_metadata()
 		
 		# Determine which mode the scheduler is in
 		if (self.label is not None and len(self.label) > 0):
@@ -130,7 +133,28 @@ class MedImageLoader():
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
 		self.index = 0
-		self.load_image_stack()	
+		self.load_image_stack()
+	# Builds up the entire cache in one go — may take a while
+	def build_pandas_database(self):
+		assert(self.all_vars is not None)
+		assert(not self.pickle_input())
+		old_mode = self.mode
+		self.mode = "iterate"
+		self._load_list_stack()
+		
+		for i,filename in enumerate(self.image_dict):
+			im = self.image_dict[filename]
+			if im.fkey not in self.all_vars.all_vars.index:
+				try:
+					im.get_image()
+					im.clear_image()
+				except ImageFileError:
+					continue
+			if i % 100 == 0:
+				self.all_vars.out_dataframe()
+		self.clear_mem()
+		self.all_vars.out_dataframe()
+		self.mode = old_mode
 	def pickle_input(self):
 		return len(self.image_folders) == 1 and \
 			os.path.splitext(self.image_folders[0])[1] == ".pkl"
@@ -171,18 +195,14 @@ class MedImageLoader():
 				all_vars=self.all_vars.all_vars)
 			fname_list = list(fname_list)
 			if len(fname_list) == 0:
+				
+				print(self.all_vars.all_vars.loc[:,self.tl()])
 				raise Exception("No valid files from %s" % self.tl())
 			assert(isinstance(fname_list,list))
 			return self.all_vars.stack_list_by_label(fname_list,self.tl())
 		else:
 			raise Exception("Invalid mode: %s" % self.mode)
-	def load_image_stack(self):
-		if self.get_mem() > 10000000000:
-			print("Clearing memory")
-			self.clear_mem()
-		#self.rotate_labels()
-		if self.tl() not in self.file_list_dict:
-			self.file_list_dict[self.tl()] = []
+	def _load_list_stack(self):
 		X_files = self.get_file_list() 
 		for i,filename_list in enumerate(X_files):
 			for j,filename in enumerate(filename_list):
@@ -199,6 +219,15 @@ class MedImageLoader():
 								cache=self.cache,
 								static_inputs = self.static_inputs)
 					self.image_dict[filename] = X_files[i][j]
+		return X_files
+	def load_image_stack(self):
+		if self.get_mem() > 10000000000:
+			print("Clearing memory")
+			self.clear_mem()
+		#self.rotate_labels()
+		if self.tl() not in self.file_list_dict:
+			self.file_list_dict[self.tl()] = []
+		X_files = self._load_list_stack()
 		if self.batch_by_pid:
 			pdict = {}
 			for images in X_files:
@@ -252,8 +281,7 @@ class MedImageLoader():
 	def __next__(self):
 		if len(self) == 0: self.load_image_stack()
 		if self.index > len(self):
-			if self.cache:
-				self.all_vars.out_dataframe()
+			self.all_vars.out_dataframe()
 			self.index = 0
 			self.rotate_labels()
 			self.load_image_stack()

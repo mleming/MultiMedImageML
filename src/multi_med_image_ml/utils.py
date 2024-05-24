@@ -94,6 +94,8 @@ def get_dim_str(filename=None,dim=None,outtype = ".npy"):
 				print("get_dim_str")
 				return foo
 			return "%s_resized_%s.npy" % (base,dim_str)
+		elif outtype == "dicom":
+			return os.path.dirname(filename)
 		else:
 			assert(outtype[0] == ".")
 			if filename.endswith(f"_resized_{dim_str}.npy"):

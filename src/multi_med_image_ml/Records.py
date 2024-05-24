@@ -106,7 +106,31 @@ class ImageRecord():
 				elif ext == ".dcm":
 					self.image_type = "dicom"
 				else:
-					raise Exception("Not implemented for extension %s" % ext)
+					raise Exception(
+					"Not implemented for extension %s" % ext)
+			elif os.path.isfile(
+				get_dim_str(self.filename,
+						dim=self.dim,
+						outtype='.nii.gz')):
+				self.filename = get_dim_str(self.filename,
+							dim=self.dim,
+							outtype='.nii.gz')
+				return self.get_image_type()
+			elif os.path.isfile(
+				get_dim_str(self.filename,
+						dim=self.dim,
+						outtype='.nii')):
+				self.filename = get_dim_str(self.filename,
+							dim=self.dim,
+							outtype='.nii')
+				return self.get_image_type()
+			elif os.path.isdir(get_dim_str(self.filename,
+							dim=self.dim,
+							outtype='dicom')):
+				self.filename = get_dim_str(self.filename,
+							dim=self.dim,
+							outtype='dicom')
+				return self.get_image_type()
 		return self.image_type
 	def get_mem(self):
 		if self.image is None:

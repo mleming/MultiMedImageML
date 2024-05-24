@@ -18,6 +18,8 @@ class DataBaseWrapper():
 
 		self.filename = filename
 		self.dim = dim
+		self.labels = [] if labels is None else labels
+		self.confounds = [] if confounds is None else confounds
 		if all_vars is not None:
 			self.all_vars = all_vars
 			self.columns = set(self.all_vars.columns)
@@ -35,9 +37,12 @@ class DataBaseWrapper():
 		if isinstance(self.all_vars,str) and os.path.isfile(self.all_vars)\
 			 and os.path.splitext(self.all_vars)[1] == ".pkl":
 			self.all_vars = pd.read_pickle(self.all_vars)
-		self.labels = [] if labels is None else labels
-		self.confounds = [] if confounds is None else confounds
+	
+	def build_metadata(self):
 		for l in self.labels:
+			if l not in self.all_vars.columns:
+				print("%s was dead the whole time" % l)
+				print(self.all_vars)
 			assert(l in self.all_vars.columns)
 		for c in self.confounds:
 			assert(c in self.all_vars.columns)
@@ -200,6 +205,7 @@ class DataBaseWrapper():
 	def get_birth_date(self,fkey):
 		d = self._get_val(fkey,["BirthDTS"])
 		return self.parse_date(d)
+	
 	def loc_val(self,fkey,c):
 		try:
 			return self.all_vars.loc[fkey,c]
@@ -228,8 +234,8 @@ class DataBaseWrapper():
 				if not os.path.isfile(json_file):
 					return
 		npy_file = get_dim_str(nifti_file,self.dim)
-		if not os.path.isfile(npy_file):
-			return
+		#if not os.path.isfile(npy_file):
+		#	return
 		if npy_file not in self.jdict and npy_file not in self.all_vars.index:
 			with open(json_file,'r') as fileobj:
 				json_dict = json.load(fileobj)
