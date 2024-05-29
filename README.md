@@ -40,12 +40,40 @@ Data may be represented with a folder structure.
 # Dataset
 ```
 .
- * [Samples](./Samples)
-   * [control](./Samples/control)
-     * [patient1](./Samples/control/patient1)
-     * [patient2](./Samples/control/patient2)
-   * [test](./Samples/test)
-     * [patient3](./Samples/test/patient3)
-     * [patient4](./Samples/test/patient4)
+└── control
+    ├── 941_S_7051
+    │   ├── Axial_3TE_T2_STAR
+    │   │   └── 2022-03-07_11_03_03.0
+    │   │       ├── I1553008
+    │   │       │   ├── I1553008_Axial_3TE_T2_STAR_20220307110304_5_e3_ph.json
+    │   │       │   └── I1553008_Axial_3TE_T2_STAR_20220307110304_5_e3_ph.nii.gz
+    │   │       └── I1553014
+    │   │           ├── I1553014_Axial_3TE_T2_STAR_20220307110304_5_ph.json
+    │   │           └── I1553014_Axial_3TE_T2_STAR_20220307110304_5_ph.nii.gz
+    │   ├── HighResHippocampus
+    │   │   └── 2022-03-07_11_03_03.0
+    │   │       └── I1553013
+    │   │           ├── I1553013_HighResHippocampus_20220307110304_11.json
+    │   │           └── I1553013_HighResHippocampus_20220307110304_11.nii.gz
+    │   └── Sagittal_3D_FLAIR
+    │       └── 2022-03-07_11_03_03.0
+    │           └── I1553012
+    │               ├── I1553012_Sagittal_3D_FLAIR_20220307110304_3.json
+    │               └── I1553012_Sagittal_3D_FLAIR_20220307110304_3.nii.gz
+    └── 941_S_7087
+        ├── Axial_3D_PASL__Eyes_Open_
+        │   └── 2022-06-15_14_38_03.0
+        │       └── I1591322
+        │           ├── I1591322_Axial_3D_PASL_(Eyes_Open)_20220615143803_6.json
+        │           └── I1591322_Axial_3D_PASL_(Eyes_Open)_20220615143803_6.nii.gz
+        └── Perfusion_Weighted
+            └── 2022-06-15_14_38_03.0
+                └── I1591323
+                    ├── I1591323_Axial_3D_PASL_(Eyes_Open)_20220615143803_7.json
+                    └── I1591323_Axial_3D_PASL_(Eyes_Open)_20220615143803_7.nii.gz
+
 ```
+
+In the case of the above folder structure, "/path/to/control" may simply be input into the MedImageLoader function. For multiple labels, "/path/to/test" may also be input.
+
 
