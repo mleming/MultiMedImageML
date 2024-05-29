@@ -23,8 +23,7 @@ class MultiInputTrainer():
 		checkpoint_dir = None,
 		name = 'experiment_name',
 		verbose = False,
-		save_latest_freq = 100,
-		pretrained_model_file=None):
+		save_latest_freq = 100):
 		
 		# Core variables for training the self.model
 		self.model = model
@@ -37,12 +36,8 @@ class MultiInputTrainer():
 			self.model_file = os.path.join(
 				self.checkpoint_dir,
 				'%s.pt' % self.name)
-			if pretrained_model_file is not None:
-				model.load_state_dict(torch.load(pretrained_model_file))
-			elif os.path.isfile(self.model_file):
+			if os.path.isfile(self.model_file):
 				model.load_state_dict(torch.load(self.model_file))
-		elif pretrained_model_file is not None: 
-			model.load_state_dict(torch.load(pretrained_model_file))
 		
 		self.optimizer = torch.optim.Adam(
 			self.model.classifier_parameters(),
@@ -97,7 +92,7 @@ class MultiInputTrainer():
 		self.verbose = verbose
 		self.save_latest_freq = save_latest_freq
 		
-	def loop(self,pr: BatchRecord,dataloader=None ):
+	def loop(self, pr: BatchRecord, dataloader = None):
 		assert(isinstance(pr,BatchRecord))
 		x = self.model(pr,return_encoded=True)
 		y_pred,y_reg = self.model(x,
@@ -194,4 +189,5 @@ class MultiInputTrainer():
 				
 		self.index += 1
 
-
+	def test(self):
+		return

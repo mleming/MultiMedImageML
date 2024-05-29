@@ -264,14 +264,15 @@ class TestSimple(unittest.TestCase):
 			continue
 	def test_model(self):
 		return
-		model = MultiInputModule((32,32),regressor_dims=(32,32))
+		model = MultiInputModule(Y_dim=(32,32),C_dim=(32,32))
 		#medim_loader = MedImageLoader(imfolder1,imfolder2,
 		#	cache=True)
 		#for image,label in medim_loader: continue
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			group_by="Patient ID",
 			return_obj=True,
-			cache=True,dtype="torch")
+			cache=True,dtype="torch",
+			Y_dim = (32,32),C_dim=(32,32))
 		optimizer = torch.optim.Adam(
 			model.classifier_parameters(),
 			betas = (0.5,0.999),
@@ -282,13 +283,19 @@ class TestSimple(unittest.TestCase):
 		for p in medim_loader:
 			optimizer.zero_grad()
 			y_pred,y_reg = model(p)
+			print("y_pred")
+			print(y_pred.size())
+			print("y_reg")
+			print(y_reg.size())
+			print("p.get_Y()")
+			print(p.get_Y().size())
 			loss = loss_function(p.get_Y(),y_pred)
 			loss.backward()
 			optimizer.step()
 			break
 	def test_trainer(self):
 		return
-		model = MultiInputModule((32,32),regressor_dims=(32,32))
+		model = MultiInputModule(Y_dim = (17,2),C_dim=(13,11))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=True,
 			label=["MRAcquisitionType",
@@ -296,7 +303,7 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14)
+			batch_size=14,Y_dim=(17,2),C_dim=(13,11))
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			#print(f"Epoch {i}")
@@ -304,7 +311,7 @@ class TestSimple(unittest.TestCase):
 				trainer.loop(p,dataloader=medim_loader)
 		
 	def test_cache2(self):
-		model = MultiInputModule((32,32),regressor_dims=(32,32))
+		model = MultiInputModule(Y_dim = (13,14),C_dim=(19,21))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=False,
 			label=["MRAcquisitionType",
@@ -312,14 +319,15 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14)
+			batch_size=14,Y_dim = (13,14),C_dim=(19,21))
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			#print(f"Epoch {i}")
 			for p in medim_loader:
 				trainer.loop(p,dataloader=medim_loader)	
 	def test_cache3(self):
-		model = MultiInputModule((32,32),regressor_dims=(32,32))
+		return
+		model = MultiInputModule((11,17),C_dim=(23,5))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=True,
 			label=["MRAcquisitionType",
@@ -327,7 +335,7 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14)
+			batch_size=14,Y_dim=(11,17),C_dim=(23,5))
 		trainer = MultiInputTrainer(model,
 					batch_size=2,
 					loss_image_dir = '../loss_images',
@@ -339,7 +347,9 @@ class TestSimple(unittest.TestCase):
 			#print(f"Epoch {i}")
 			for p in medim_loader:
 				trainer.loop(p,dataloader=medim_loader)	
-
+	def test_weight_download(self):
+		return
+		model = MultiInputModule(weights="unit_test")
 if __name__ == "__main__":
 	#clear_files()
 	# Runs the tests twice, once with cached files and once without

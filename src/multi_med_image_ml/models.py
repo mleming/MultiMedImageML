@@ -10,6 +10,7 @@ import hashlib
 import os,sys
 from copy import deepcopy as copy
 from Records import ImageRecord,BatchRecord
+from utils import download_weights
 
 # Three functions that are used to get the age encoding functions
 def time_index(i,pos,d=512,c=10000):
@@ -101,7 +102,7 @@ class NeuralNetwork(nn.Module):
         return logits
 
 class Encoder(nn.Module):
-	def __init__(self,LATENT_SIZE=512):
+	def __init__(self,latent_dim=512):
 		super(Encoder,self).__init__()
 		nchan=1
 		base_feat = 64
@@ -130,7 +131,7 @@ class Encoder(nn.Module):
 			Reshape([-1,base_feat*32]),
 			nn.Linear(in_features = base_feat*32, out_features = base_feat*16),
 			nn.LeakyReLU(),
-			nn.Linear(in_features = base_feat*16, out_features = LATENT_SIZE),
+			nn.Linear(in_features = base_feat*16, out_features = latent_dim),
 			
 		)
 	def parameters(self):
@@ -145,9 +146,9 @@ class Decoder(nn.Module):
 		super(Decoder,self).__init__()
 		nchan=1
 		base_feat = 64
-		LATENT_SIZE = 512	
+		latent_dim = 512	
 		self.decoder = nn.Sequential(
-			nn.Linear(in_features = LATENT_SIZE, out_features = base_feat*16),
+			nn.Linear(in_features = latent_dim, out_features = base_feat*16),
 			nn.ReLU(),
 			nn.BatchNorm1d(base_feat*16),
 			nn.Linear(in_features = base_feat*16, out_features = base_feat*32),
@@ -233,7 +234,7 @@ class Regressor(nn.Module):
 		return torch.cat([r(x) for r in self.regressor_set],2)
 		
 class Classifier(nn.Module):
-	def __init__(self,latent_dim,n_inputs,base_feat,nout,nlabels):
+	def __init__(self,latent_dim,n_inputs,base_feat,n_out,n_labels):
 		super(Classifier,self).__init__()
 		
 		self.classifier = nn.Sequential(
@@ -251,8 +252,8 @@ class Classifier(nn.Module):
 			Reshape([-1,1,n_inputs*base_feat*2]),
 
 			nn.Linear(in_features = n_inputs*base_feat*2,
-				out_features = nout*nlabels),
-			Reshape([-1,nout,nlabels]),
+				out_features = n_out*n_labels),
+			Reshape([-1,n_out,n_labels]),
 			nn.Sigmoid(),	
 		)
 	def parameters(self):
@@ -262,29 +263,36 @@ class Classifier(nn.Module):
 
 class MultiInputModule(nn.Module):
 	def __init__(self,
-				n_out,
+				Y_dim = (16,32), # Number of labels, Number of choices
+				C_dim = (16,32), # Number of labels, Number of choices
 				n_dyn_inputs = 14,
-				n_stat_inputs = 0,
+				n_stat_inputs = 2,
 				use_attn = False,
 				encode_age = False,
-				regressor_dims = None,
 				variational = False,
 				zero_input = False,
 				remove_uncertain = False,
 				device = torch.device('cpu'),
-				latent_dim = 128):
+				latent_dim = 128,
+				weights = None):
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters
-		self.LATENT_DIM = latent_dim
+		self.latent_dim = latent_dim
+		
+		# Number of non-image, patient-specific demographic inputs. Sex and 
+		# ethnicity are two that can be applied.
 		self.n_stat_inputs = n_stat_inputs
+		
+		# Max number of images that can be passed in
 		self.n_dyn_inputs = n_dyn_inputs
+		
+		# Total number of inputs, which is used for the classifier model
 		self.n_inputs = self.n_stat_inputs + self.n_dyn_inputs
-		base_feat = 64
-		self.nout = n_out
+		
+		self.Y_dim = (1,Y_dim) if isinstance(Y_dim,int) else Y_dim
 		num_heads = self.n_inputs
-		embed_dim = self.LATENT_DIM
-		self.regressor_dims = regressor_dims
+		self.C_dim = C_dim
 		self.zero_input = zero_input
 		self.remove_uncertain = remove_uncertain
 		if self.remove_uncertain:
@@ -292,13 +300,11 @@ class MultiInputModule(nn.Module):
 			self.num_training_samples = 300
 			self.training_sample = torch.zeros(
 				(
-					self.LATENT_DIM,
+					self.latent_dim,
 					self.num_training_samples
 				),
 				device=device)
 
-		if isinstance(n_out,int):
-			n_out = (n_out,1)
 		# Training options
 		self.use_attn = use_attn
 		self.encode_age = encode_age
@@ -309,40 +315,52 @@ class MultiInputModule(nn.Module):
 		# the test phase
 		self.static_record = [set() for _ in range(self.n_stat_inputs)]
 		
+		# Sets the multiplier for the number of features in each model component
+		base_feat = 64
 		# Modules
 		
 		# Makes the encoder output a variational latent space, so it's a
 		# Gaussian distribution.
 		if self.variational:
-			self.encoder = Encoder(LATENT_SIZE=2*self.LATENT_DIM)
+			self.encoder = Encoder(latent_dim=self.latent_dim)
 			self.z_mean = nn.Sequential(
-				nn.Linear(2*self.LATENT_DIM,self.LATENT_DIM)
+				nn.Linear(2*self.latent_dim,self.latent_dim)
 			)
 			self.z_log_sigma = nn.Sequential(
-				nn.Linear(2*self.LATENT_DIM,self.LATENT_DIM)
+				nn.Linear(2*self.latent_dim,self.latent_dim)
 			)
 			self.epsilon = torch.distributions.Normal(0, 1)
 			self.epsilon.loc = self.epsilon.loc.cuda(device)
 			self.epsilon.scale = self.epsilon.scale.cuda(device)
 		else:
-			self.encoder = Encoder(LATENT_SIZE=self.LATENT_DIM)
-		#self.decoder = Decoder()
-		if self.use_attn:
-			self.multihead_attn = nn.MultiheadAttention(
-										embed_dim,
-										num_heads,
-										batch_first=True)
-		self.classifier = Classifier(self.LATENT_DIM,
-										self.n_inputs,
-										base_feat,
-										self.nout[0],
-										self.nout[1])
-		if self.regressor_dims is not None:
-			n_confounds,n_choices = self.regressor_dims
-			self.regressor = Regressor(self.LATENT_DIM,n_confounds,n_choices,
+			self.encoder = Encoder(latent_dim=self.latent_dim)
+		# The output of the classifier and regressor, and encoder are kept
+		# consistent, to 16 max outputs and 32 possible choices. This makes
+		# cross-training easier, though it's less efficient.
+		self.classifier = Classifier(latent_dim = self.latent_dim,
+										n_inputs = self.n_inputs,
+										base_feat = base_feat,
+										n_out = self.Y_dim[0],#16,
+										n_labels = self.Y_dim[1])#32)
+		if self.C_dim is not None:
+			n_confounds,n_choices = self.C_dim
+			self.regressor = Regressor(self.latent_dim,
+				n_confounds=self.C_dim[0],
+				n_choices=self.C_dim[1],
 				device=device)
 		else: self.regressor = None
-	
+		
+		if weights is not None:
+			if self.C_dim ! (16,32) or self.Y_dim != (16,32):
+				warnings.warn(
+					"Pretrained models may not function if defaults are altered"
+					)
+			if os.path.isfile(weights) and \
+				os.path.splitext(weights)[1] == ".pt":
+				self.load_state_dict(torch.load(weights))
+			else:
+				self.load_state_dict(torch.load(download_weights(weights)))
+
 	def forward_ensemble(self,kwargs,n_ens=10):
 		x = []
 		for i in range(n_ens):
@@ -469,7 +487,7 @@ class MultiInputModule(nn.Module):
 					age_encoding = get_age_encoding(
 									date,
 									bdate1,
-									d=self.LATENT_DIM)
+									d=self.latent_dim)
 					age_encodings.append(age_encoding)
 				age_encodings = np.array(age_encodings)
 				age_encodings =  torch.tensor(
@@ -511,7 +529,7 @@ class MultiInputModule(nn.Module):
 								input (previous inputs were %s)
 							""" % (static_input[i],str(e))
 						)
-			x_ = encode_static_inputs(static_input,d=self.LATENT_DIM)
+			x_ = encode_static_inputs(static_input,d=self.latent_dim)
 			x_ = torch.tensor(x_,device = x.device)
 			x_ = torch.unsqueeze(x_,0)
 			for i in range(x_.shape[0]):
@@ -554,7 +572,7 @@ class MultiInputModule(nn.Module):
 	
 		# Switch batch channel with layer channel prior to running classifier
 		x = torch.unsqueeze(x,-1)
-		x = x.contiguous().view([-1,1,self.LATENT_DIM*self.n_inputs]) # 16*512 -> 1*[16*512]
+		x = x.contiguous().view([-1,1,self.latent_dim*self.n_inputs]) # 16*512 -> 1*[16*512]
 		x = self.classifier(x)
 		if use_regression: return x,reg
 		else: return x
@@ -586,7 +604,7 @@ class VariationalEncoder(nn.Module):
 		super(Encoder,self).__init__()
 		nchan=1
 		base_feat = 64
-		LATENT_SIZE = 512
+		latent_dim = 512
 		self.encoder = nn.Sequential(
 			nn.Conv3d(in_channels = nchan, out_channels = base_feat, stride=2, kernel_size=5, padding = 2), #1*96*96*96 -> 64*48*48*48
 			nn.LeakyReLU(),
@@ -607,7 +625,7 @@ class VariationalEncoder(nn.Module):
 			Reshape([-1,base_feat*32]),
 			nn.Linear(in_features = base_feat*32, out_features = base_feat*16),
 			nn.LeakyReLU(),
-			nn.Linear(in_features = base_feat*16, out_features = LATENT_SIZE)
+			nn.Linear(in_features = base_feat*16, out_features = latent_dim)
 		)
 	def forward(self, x):
 		self.z_mean = nn.Linear(64, latent_dim)
@@ -650,8 +668,8 @@ class Encoder1D(nn.Module):
 			)
 		else:
 			self.encoder = nn.Sequential(
-				#nn.Conv2d(in_channels = 1, out_channels = base_feat*4, stride=1, kernel_size=(self.LATENT_DIM,1), padding =0), #1*96*96*96 -> 64*48*48*48
-				#Reshape([-1,self.LATENT_DIM*self.n_inputs]),
+				#nn.Conv2d(in_channels = 1, out_channels = base_feat*4, stride=1, kernel_size=(self.latent_dim,1), padding =0), #1*96*96*96 -> 64*48*48*48
+				#Reshape([-1,self.latent_dim*self.n_inputs]),
 				nn.Linear(input_dim,input_dim//2),
 				nn.LeakyReLU(),
 				nn.BatchNorm1d(input_dim//2,affine=True),

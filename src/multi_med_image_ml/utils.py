@@ -13,6 +13,8 @@ import pydicom as dicom
 import dicom2nifti
 import dicom2nifti.settings as settings
 settings.disable_validate_slice_increment()
+from platformdirs import user_cache_dir
+import urllib.request
 
 # Used to get a training set with equal distributions of input covariates
 # Can also be used to only have certain ranges of continuous covariates,
@@ -37,6 +39,7 @@ platform_system = platform.system()
 Uses dcm2niix, since that's had the best results overall when converting dicom
 to nifti, even though it's a UNIX command
 """
+
 def compile_dicom_folder(dicom_folder,db_builder=None):
 	if dcm2niix_installed:
 		if platform_system == "Windows":
@@ -88,7 +91,8 @@ def get_dim_str(filename=None,dim=None,outtype = ".npy"):
 			if filename.endswith(f"resized_{dim_str}.npy"):
 				return filename
 			elif ext1.lower() == ".npy":
-				foo = re.sub("resized_[0-9].*.npy$",f"resized_{dim_str}.npy",filename)
+				foo = re.sub("resized_[0-9].*.npy$",
+						f"resized_{dim_str}.npy",filename)
 				print(filename)
 				print(foo)
 				print("get_dim_str")
@@ -105,19 +109,93 @@ def get_dim_str(filename=None,dim=None,outtype = ".npy"):
 	#assert(".nii" in [ext1.lower(),ext2.lower()])
 	else:
 		return dim_str
-	
+
+# Downloads and caches pretrained model weights
+def download_file_from_google_drive(file_id, destination):
+	URL = "https://docs.google.com/uc?export=download&confirm=t"
+
+	session = requests.Session()
+
+	response = session.get(URL, params={"id": file_id}, stream=True)
+	token = get_confirm_token(response)
+	print("token")
+	print(token)
+	print("response")
+	print(response)
+	token = "t"
+	if token:
+		params = {"id": file_id, "confirm": token}
+		response = session.get(URL, params=params, stream=True)
+	print(destination)
+	save_response_content(response, destination)
+
+
+def get_confirm_token(response):
+	for key, value in response.cookies.items():
+		if key.startswith("download_warning"):
+			return value
+
+	return None
+
+
+def save_response_content(response, destination):
+	CHUNK_SIZE = 32768
+
+	with open(destination, "wb") as f:
+		for chunk in response.iter_content(CHUNK_SIZE):
+			if chunk:  # filter out keep-alive new chunks
+				f.write(chunk)
+
+import requests,gdown
+def download_weights(weights):
+	weights_dir = os.path.join(user_cache_dir(),"MultiMedImageML","weights")
+	print(weights_dir)
+	os.makedirs(weights_dir,exist_ok=True)
+	weights_file = os.path.join(weights_dir,f"{weights}.pt")
+	if os.path.isfile(weights_file):
+		return weights_file
+	weights_lib_json = os.path.join(weights_dir,"weights.json")
+	if not os.path.isfile(weights_lib_json):
+		#download_file_from_google_drive(
+		#	"1Scl5iib7V5pWRULKnc6-k0edN2YfGhc7",
+		#	weights_lib_json)
+		file_id = "1Scl5iib7V5pWRULKnc6-k0edN2YfGhc7"
+		gdown.download(
+			f"https://drive.google.com/uc?export=download&confirm=pbef&id={file_id}",
+   	 		weights_lib_json
+		)
+	print(weights_lib_json)
+	with open(weights_lib_json,'r') as fileobj:
+		weights_lib = json.load(fileobj)
+	if weights not in weights_lib:
+		raise Exception(f"No such model: {weights}")
+	else:
+		#download_file_from_google_drive(
+		#	weights_lib[weights],
+		#	weights_file)
+		file_id = weights_lib[weights]
+		gdown.download(
+			f"https://drive.google.com/uc?export=download&confirm=pbef&id={file_id}",
+   	 		weights_file
+		)
+	assert(os.path.isfile(weights_file))
+	return weights_file
+
+# Determines if the input is an applicable image file. Excludes temporary files
 def is_image_file(filename):
 	basename,ext = os.path.splitext(filename)
 	_,ext2 = os.path.splitext(basename)
 	ext = ext2 + ext
 	basename = os.path.basename(basename)
-	if basename == "temp": return False
+	if not not_temp(basename): return False
 	return ext.lower() in [".nii",".nii.gz"]
 
+# Determines if file is dicom
 def is_dicom(filename):
 	basename,ext = os.path.splitext(filename)
 	return ext.lower() == ".dcm"
 
+# Three functions that search a folder path for all applicable images.
 def get_file_list_from_str(obj,db_builder=None):
 	assert(isinstance(obj, str))
 	if os.path.isfile(obj):
@@ -179,7 +257,7 @@ def get_file_list(obj,allow_list_of_list=True,db_builder=None):
 		raise Exception("One without valid files")
 	return obj
 
-
+# Ad-hoc function that determines whether given keys are equal
 def equal_terms(term):
 	trans_dict = {'NOT_HISPANIC':'NO_NON_HISPANIC',
 				'HISPANIC':'YES_HISPANIC',
@@ -201,13 +279,9 @@ def date_sorter(folder,ext):
 	filelist = sorted(filelist,key=os.path.getmtime)
 	return filelist
 
-# Takes a folder of dicom files and turns it into a .nii.gz file. Relies on 
-# a bunch of UNIX programs. It's crap, but it works.
+# Takes a folder of dicom files and turns it into a .nii.gz file, with metadata.
+# stored in a .json file. Relies on dcm2niix.
 def compile_dicom(dicom_folder,cache=True,db_builder=None):
-	
-	#if not os.path.isdir(output_dir):
-	#	print(output_dir)
-	#	os.makedirs(output_dir)
 	assert(os.path.isdir(dicom_folder))
 	json_file = date_sorter(dicom_folder,'.json')
 	nii_file = date_sorter(dicom_folder,'.nii*')
@@ -237,6 +311,7 @@ def compile_dicom(dicom_folder,cache=True,db_builder=None):
 		db_builder.add_json(nifti_file=nii_file,json_file=json_file)
 	return nii_file,json_file
 
+# Resizes and standardizes 3d numpy arrays to normalized dimensions
 def resize_np(nifti_data,dim):
 	if nifti_data.min() < 0 or nifti_data.max() > 1:
 		nifti_data -= nifti_data.min()
@@ -254,7 +329,7 @@ def resize_np(nifti_data,dim):
 		nifti_data = ndimage.zoom(nifti_data,zp)
 	return nifti_data
 
-
+# Prime number functions used in the data matching schemes
 def prime(i, primes):
 	for prime in primes:
 		if not (i == prime or i % prime):
@@ -294,13 +369,15 @@ def get_prime_form(confounds,n_buckets,sorted_confounds = None):
 			buckets = np.unique(confounds[i,:])
 		else:
 			buckets_s = []
-			for kk in range(0,sorted_confounds.shape[1],int(np.ceil(sorted_confounds.shape[1]/float(n_buckets[i])))):
+			lim = int(np.ceil(sorted_confounds.shape[1]/float(n_buckets[i])))
+			for kk in range(0,sorted_confounds.shape[1],lim):
 				buckets_s.append(sorted_confounds[i,kk])
 			buckets_s.append(sorted_confounds[i,-1])
 			buckets_s = np.array(buckets_s)
 			min_conf = sorted_confounds[i,0]
 			max_conf = sorted_confounds[i,-1]
-			buckets_v = (np.array(range(n_buckets[i] + 1))/float(n_buckets[i])) * (max_conf - min_conf) + min_conf
+			buckets_v = (np.array(range(n_buckets[i] + 1))/float(n_buckets[i]))\
+				 * (max_conf - min_conf) + min_conf
 			sv_ratio = 1.0
 			buckets = (sv_ratio) * buckets_s + (1.0 - sv_ratio) * buckets_v
 		for j in range(confounds.shape[1]):
@@ -393,8 +470,8 @@ def integrate_arrs_none(S1,S2):
 		i += 1
 	return output
 
-# Returns a boolean array that is true if either classes or confounds has a None or
-# NaN value anywhere at the given index
+# Returns a boolean array that is true if either classes or confounds has a None
+# or NaN value anywhere at the given index
 def get_none_array(classes=None,confounds=None):
 	if classes is not None and confounds is not None:
 		assert(confounds.shape[1] == classes.shape[0])
@@ -427,23 +504,8 @@ def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,u
 	confounds = np.array(confounds)
 	if len(confounds) == 0:
 		confounds = np.ones((1,len(classes)),dtype=object)
-	#print(confounds)
 	ff = {}
-	'''
-	for i in range(confounds.shape[1]):
-		gg = str(classes[i]) + " " + str(confounds[1,i]) #+ " " + str(confounds[1,i])
-		if gg not in ff:
-			ff[gg] = gg
-			print(gg)
-	for i in range(confounds.shape[0]):
-		print(str(confounds[i,0]) + " is str: " + str(isinstance(confounds[i,0],str)))
-		print(np.unique(confounds[i,:]))
-		'''
-	
 	if exclude_none:
-		#print("classes shape " + str(classes.shape))
-		#print("confounds shape " + str(confounds.shape))
-		#print("classes[0] " + str(classes[0]))
 		has_none = get_none_array(classes,confounds)
 		confounds = confounds[:,~has_none]
 		classes = classes[~has_none]
@@ -460,7 +522,6 @@ def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,u
 		except:
 			print(classes)
 			exit()
-		#print(unique_classes)
 	elif isinstance(unique_classes,list):
 		unique_classes = np.unique(unique_classes)
 	if not np.all(sorted(unique_classes) == list(range(len(unique_classes)))):
@@ -469,7 +530,6 @@ def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,u
 				if classes[i] == unique_classes[j]:
 					classes[i] = j
 					break
-	#print(classes)
 	n_buckets = [1 for x in range(confounds.shape[0])]
 	# Used for bucketing purposes
 	sorted_confounds = np.sort(confounds,axis=1)
@@ -486,23 +546,21 @@ def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,u
 	while min(p_vals) < plim and np.sum(selection) > 0:
 		primed = get_prime_form(confounds,n_buckets, sorted_confounds)
 		primed = np.prod(primed,axis=0,dtype=int)
-		selection = get_class_selection(classes,primed,unique_classes=unique_classes)
+		selection = get_class_selection(classes,
+										primed,
+										unique_classes=unique_classes)
 		rr = list(range(confounds.shape[0]))
 		random.shuffle(rr)
 		for i in rr:
-			#print("h " + str(i))
 			if not isinstance(confounds[i,0],str):
-				
-				ts = [confounds[i,np.logical_and(selection, classes == j)] for j in range(len(unique_classes))]
-				#print(ts)
-				# Makes sure there are at least five instances of each class remaining
-				if np.any(list(map(lambda k: len(k) < 5, ts))):# or len(ts) <= 1:
+				ts = [confounds[i,np.logical_and(selection, classes == j)] \
+					for j in range(len(unique_classes))]
+				# Makes sure there are at least five instances of 
+				# each class remaining
+				if np.any(list(map(lambda k: len(k) < 5, ts))):
 					selection = np.zeros(classes.shape,dtype=bool)
-					break
-				#print("HERE")
-				
+					break				
 				min_p,max_p = multi_mannwhitneyu(ts)
-				#print("%f %f" % (min_p,max_p))
 				p_vals[i] = min_p
 				if p_vals[i] < plim:
 					n_buckets[i] += 1
@@ -525,10 +583,6 @@ def separate_set(selections,set_divisions = [0.5,0.5],IDs=None):
 	random.shuffle(rr)
 	if IDs is None:
 		IDs = np.array(list(range(len(selections))))
-	#if len(IDs.shape) == 1:
-	#	IDs = np.expand_dims(IDs,0)
-	#print(IDs.shape)
-	#IDs = get_prime_form(IDs,[len(np.unique(IDs[x,:])) for x in range(IDs.shape[0])],np.sort(IDs,axis=1))
 	selections_ids = np.zeros(selections.shape,dtype=int)
 	totals = list(range(len(set_divisions)))
 	prime_hasher = {}
@@ -541,7 +595,8 @@ def separate_set(selections,set_divisions = [0.5,0.5],IDs=None):
 			totals[selections_ids[i] - 1] += 1
 			continue
 		for j in range(len(set_divisions)):
-			if np.sum(totals) == 0 or totals[j] / np.sum(totals) < set_divisions[j]:
+			if np.sum(totals) == 0 or \
+				totals[j] / np.sum(totals) < set_divisions[j]:
 				break
 		selections_ids[i] = j+1
 		totals[j] += 1
@@ -556,7 +611,8 @@ def nifti_to_np(nifti_filepath,output_image_dim):
 	m = nifti_data.max()
 	nifti_data = nifti_data / m
 	nifti_data = nifti_data.astype(np.float32)
-	zp = [output_image_dim[i]/nifti_data.shape[i] for i in range(len(output_image_dim))]
+	zp = [output_image_dim[i]/nifti_data.shape[i] \
+		for i in range(len(output_image_dim))]
 	nifti_data_zoomed = ndimage.zoom(nifti_data,zp)
 	return nifti_data_zoomed
 
@@ -573,15 +629,15 @@ def str_to_list(s,nospace=False):
 		return [s]
 
 def get_lr(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
+	for param_group in optimizer.param_groups:
+		return param_group['lr']
 
 def parsedate(d,date_format="%Y-%m-%d %H:%M:%S",verbose=True):
 	try:
-		#for match in datefinder.find_dates(d.replace("_"," ")): return match
-		return datetime.datetime.strptime(d.replace("_"," ").split(".")[0],date_format)
+		return datetime.datetime.strptime(
+			d.replace("_"," ").split(".")[0],
+			date_format)
 	except ValueError:
-		#print("Bad date: %s" % d)
 		return parser.parse(d.replace("_"," "))
 
 def is_float(N):
@@ -671,13 +727,12 @@ def label_to_community(labels):
 def determine_random_partition2(arr2d,labels):
 	assert(isinstance(arr2d,np.ndarray))
 	assert(isinstance(labels,np.ndarray))
-	G = nx.from_numpy_array(arr2d)#   (((arr2d - arr2d.min())/arr2d.max()))
+	G = nx.from_numpy_array(arr2d)
 	true_modularity = nx.community.modularity(G,label_to_community(labels))
 	return true_modularity
 	random_modularities = []
 	n_labels = np.sum(labels)
-	rand_labels = copy(labels)#np.zeros((labels.shape),dtype=bool)
-	#rand_labels[:n_labels] = True
+	rand_labels = copy(labels)
 	for i in range(200):
 		random.shuffle(rand_labels)
 		random_modularities.append(
@@ -782,7 +837,10 @@ def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 			selection[i] = 0
 			continue
 		if X is None:
-			X = np.zeros((len(filename_list),X_single.shape[1],X_single.shape[2]))
+			X = np.zeros(
+				(len(filename_list),
+				X_single.shape[1],
+				X_single.shape[2]))
 		X[i,...] = X_single
 		if test_variable is not None:
 			for j,t in enumerate(test_variable):
@@ -988,7 +1046,8 @@ def get_balanced_filename_list(test_variable,confounds_array,
 	for ncv in non_confound_value_ranges:
 		if ncv in confounds_array:
 			print("confounds_array: %s" % str(confounds_array))
-			print("non_confound_value_ranges: %s" % str(non_confound_value_ranges))
+			print("non_confound_value_ranges: %s" % \
+				str(non_confound_value_ranges))
 			print("ncv: %s" % str(ncv))
 		assert(ncv not in confounds_array)
 		confounds_array.append(ncv)
@@ -1039,11 +1098,6 @@ def get_balanced_filename_list(test_variable,confounds_array,
 	# If it's a string array, it just returns strings
 	test_vars = bucketize(test_vars,n_buckets)
 	ccc = {}
-	#for t in test_vars:
-	#	if t not in ccc: ccc[t] = 0
-	#	ccc[t] += 1
-	#for t in ccc: print("%s: %d" % (t,ccc[t]))
-	#assert(np.all([isinstance(i,str) for i in test_vars]))
 	if output_selection_savepath is not None and \
 			os.path.isfile(output_selection_savepath):
 		selection = np.load(output_selection_savepath)
@@ -1051,11 +1105,8 @@ def get_balanced_filename_list(test_variable,confounds_array,
 		
 		if len(confounds_array) == 0:
 			if verbose: print(test_value_ranges)
-			#blanks = np.array(["" for _ in range(len(test_vars))])
-			#blanks = np.reshape(blanks,(1,blanks.shape[0]))
 			selection = class_balance(test_vars,[],
 				unique_classes=test_value_ranges,plim=0.1)
-			#selection = np.ones(test_vars.shape)
 		else:
 			selection = class_balance(test_vars,
 				covars_df[confounds_array].to_numpy(\
@@ -1119,10 +1170,12 @@ def parsedate(d,date_format="%Y-%m-%d %H:%M:%S"):
 def validate_all_vars(all_vars,args):
 	for c in args.confounds:
 		if c not in all_vars.columns:
-			raise Exception("Confound %s not in columns of %s"%(c,args.var_file))
+			raise Exception("Confound %s not in columns of %s"\
+				%(c,args.var_file))
 	
 	if args.label not in all_vars.columns:
-		raise Exception("Label %s not in columns of %s"%(args.label,args.var_file))
+		raise Exception("Label %s not in columns of %s"\
+			%(args.label,args.var_file))
 	
 	for index in all_vars.index:
 		if os.path.splitext(index)[1] != ".npy":
@@ -1147,7 +1200,9 @@ def hidden_batch_predictions(
 		if device is None:
 			hidden_batch = torch.zeros((batch_size,1,hidden_size,ensemble_size))
 		else:
-			hidden_batch = torch.zeros((batch_size,1,hidden_size,ensemble_size)).cuda(device)
+			hidden_batch = torch.zeros(
+					(batch_size,1,hidden_size,ensemble_size)
+				).cuda(device)
 	else:
 		if device is None:
 			hidden_batch = torch.zeros((batch_size,1,hidden_size))
@@ -1160,20 +1215,30 @@ def hidden_batch_predictions(
 				(i > 0 and group_vars[i-1] != group_vars[i]):
 			if ensemble:
 				if device is None:
-					last_hidden_var = torch.zeros((1,1,hidden_size,ensemble_size))
+					last_hidden_var = torch.zeros(
+							(1,1,hidden_size,ensemble_size)
+						)
 				else: last_hidden_var = torch.zeros((1,1,hidden_size,ensemble_size)).cuda(device)
 			else:
 				if device is None:
 					last_hidden_var = torch.zeros((1,1,hidden_size))
-				else: last_hidden_var = torch.zeros((1,1,hidden_size)).cuda(device)
+				else: last_hidden_var = torch.zeros(
+										(1,1,hidden_size)).cuda(device)
 		#print(last_hidden_var.size())
-		if (ensemble and len(last_hidden_var.size()) == 3) or ((not ensemble) and len(last_hidden_var.size()) == 2):
+		if (ensemble and len(last_hidden_var.size()) == 3) or\
+			 ((not ensemble) and len(last_hidden_var.size()) == 2):
 			last_hidden_var = torch.unsqueeze(last_hidden_var,0)
 		with torch.no_grad():
-			out,last_hidden_var = model(torch.unsqueeze(X[i,...],0),last_hidden_var)
+			out,last_hidden_var = model(torch.unsqueeze(X[i,...],0),
+				last_hidden_var)
 		if preds is None:
-			if ensemble: preds = torch.zeros((batch_size,out.size()[1],out.size()[2],out.size()[3]))
-			else: preds = torch.zeros((batch_size,out.size()[1],out.size()[2]))
+			if ensemble: preds = torch.zeros((batch_size,
+									out.size()[1],
+									out.size()[2],
+									out.size()[3]))
+			else: preds = torch.zeros((batch_size,
+									out.size()[1],
+									out.size()[2]))
 		preds[i,...] = out
 	return preds,hidden_batch
 
@@ -1190,8 +1255,8 @@ def output_test(
 		return_Xfiles = False):
 	pred   = None
 	c_pred = None
-	Y      = None
-	C      = None
+	Y	  = None
+	C	  = None
 	cert   = None
 	results = {}
 	b = args.label
@@ -1207,11 +1272,13 @@ def output_test(
 			all_vars=all_vars)
 	temp = X_files
 	while len(X_files) > 0:
-		X_,Y_,C_,choice_arr,output_labels = get_data_from_filenames(X_files[:batch_size],
-			b,confounds=confounds,
-			return_as_strs = False,
-			unique_test_vals = None,return_choice_arr=True,all_vars=all_vars)
-		#YC_,YC_dud_ = YC_conv(Y_,C_,y_weight)
+		X_,Y_,C_,choice_arr,output_labels = get_data_from_filenames(
+					X_files[:batch_size],
+					b,confounds=confounds,
+					return_as_strs = False,
+					unique_test_vals = None,
+					return_choice_arr=True,
+					all_vars=all_vars)
 		YC_pred = mucran.predict(X_)
 		pred_ = np.mean(YC_pred[:,:y_weight,:],axis=1)
 		c_pred_ = YC_pred[:,y_weight:,:]
@@ -1224,21 +1291,18 @@ def output_test(
 			pred = pred_
 			c_pred = c_pred_
 			cert = cert_
-			#X,Y,C,pred,c_pred,cert = X_,Y_,C_,pred_,c_pred_,cert_
 		else:
-			pred   = np.concatenate((pred,pred_),     axis=0)
+			pred   = np.concatenate((pred,pred_),	 axis=0)
 			c_pred = np.concatenate((c_pred,c_pred_), axis=0)
-			Y      = np.concatenate((Y,Y_),           axis=0)
-			C      = np.concatenate((C,C_),           axis=0)
-			#cert   = np.concatenate((cert,cert_),     axis=0)
+			Y	  = np.concatenate((Y,Y_),		   axis=0)
+			C	  = np.concatenate((C,C_),		   axis=0)
 		X_files = X_files[batch_size:]
 	X_files = temp
 	save_dict = {}
-	#print("cert.shape: %s" % str(cert.shape))
 	for i in range(Y.shape[0]):
 		X_file = X_files[i]
 		save_dict[X_file] = [[float(_) for _ in pred[i,:]],
-			[float(_) for _ in Y[i,:]]]#,float(cert[i])]
+			[float(_) for _ in Y[i,:]]]
 	json.dump(save_dict,open(test_predictions_file,'w'),indent=4)
 	pred_bin = np.zeros(Y.shape)
 	Y_bin = np.zeros(Y.shape)
@@ -1262,8 +1326,6 @@ def output_test(
 	
 	print("Mean AUROC: % s" % str(np.mean(roc_aucs)))
 	print("Y acc: %f" % results[b]["Y_acc"])
-	#print("Y AUROC: %s" % str(roc_auc))
-
 	print("+++")
 	print("MAX CONFOUND AUROCS")
 	for i in range(len(confounds)):
@@ -1275,10 +1337,10 @@ def output_test(
 				fpr, tpr, threshold = roc_curve(C[:,i,j],c_pred[:,i,j])
 				roc_auc = auc(fpr, tpr)
 				if not is_nan(roc_auc):
-					#roc_aucs[roc_auc] = int(np.sum(C[:,i,j]))
 					roc_aucs.append(roc_auc)
 					roc_aucs_counts.append(int(np.sum(C[:,i,j])))
-		weighted_mean = np.sum([c1*c2 for c1,c2 in zip(roc_aucs,roc_aucs_counts)]) /\
+		weighted_mean = np.sum(
+				[c1*c2 for c1,c2 in zip(roc_aucs,roc_aucs_counts)]) /\
 				 np.sum(roc_aucs_counts)
 		try:
 			results[confound] = {}
@@ -1303,97 +1365,78 @@ def output_test(
 
 
 def tensor2im(input_image, imtype=np.uint8):
-    """"Converts a Tensor array into a numpy image array.
+	""""Converts a Tensor array into a numpy image array.
 
-    Parameters:
-        input_image (tensor) --  the input image tensor array
-        imtype (type)        --  the desired type of the converted numpy array
-    """
-    if not isinstance(input_image, np.ndarray):
-        if isinstance(input_image, torch.Tensor):  # get the data from a variable
-            image_tensor = input_image.data
-        else:
-            return input_image
-        image_numpy = image_tensor[0].cpu().float().numpy()  # convert it into a numpy array
-        if image_numpy.shape[0] == 1:  # grayscale to RGB
-            image_numpy = np.tile(image_numpy, (3, 1, 1))
-        image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0  # post-processing: tranpose and scaling
-    else:  # if it is a numpy array, do nothing
-        image_numpy = input_image
-    return image_numpy.astype(imtype)
+	Parameters:
+		input_image (tensor) --  the input image tensor array
+		imtype (type)		--  the desired type of the converted numpy array
+	"""
+	if not isinstance(input_image, np.ndarray):
+		if isinstance(input_image, torch.Tensor): # get the data from a variable
+			image_tensor = input_image.data
+		else:
+			return input_image
+		# convert it into a numpy array
+		image_numpy = image_tensor[0].cpu().float().numpy()
+		if image_numpy.shape[0] == 1:  # grayscale to RGB
+			image_numpy = np.tile(image_numpy, (3, 1, 1))
+		# post-processing: tranpose and scaling
+		image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+	else:
+		# if it is a numpy array, do nothing
+		image_numpy = input_image
+	return image_numpy.astype(imtype)
 
 
 def diagnose_network(net, name='network'):
-    """Calculate and print the mean of average absolute(gradients)
+	"""Calculate and print the mean of average absolute(gradients)
 
-    Parameters:
-        net (torch network) -- Torch network
-        name (str) -- the name of the network
-    """
-    mean = 0.0
-    count = 0
-    for param in net.parameters():
-        if param.grad is not None:
-            mean += torch.mean(torch.abs(param.grad.data))
-            count += 1
-    if count > 0:
-        mean = mean / count
-    print(name)
-    print(mean)
+	Parameters:
+		net (torch network) -- Torch network
+		name (str) -- the name of the network
+	"""
+	mean = 0.0
+	count = 0
+	for param in net.parameters():
+		if param.grad is not None:
+			mean += torch.mean(torch.abs(param.grad.data))
+			count += 1
+	if count > 0:
+		mean = mean / count
+	print(name)
+	print(mean)
 
 
 def save_image(image_numpy, image_path, aspect_ratio=1.0):
-    """Save a numpy image to the disk
+	"""Save a numpy image to the disk
 
-    Parameters:
-        image_numpy (numpy array) -- input numpy array
-        image_path (str)          -- the path of the image
-    """
+	Parameters:
+		image_numpy (numpy array) -- input numpy array
+		image_path (str)		  -- the path of the image
+	"""
 
-    image_pil = Image.fromarray(image_numpy)
-    h, w, _ = image_numpy.shape
+	image_pil = Image.fromarray(image_numpy)
+	h, w, _ = image_numpy.shape
 
-    if aspect_ratio > 1.0:
-        image_pil = image_pil.resize((h, int(w * aspect_ratio)), Image.BICUBIC)
-    if aspect_ratio < 1.0:
-        image_pil = image_pil.resize((int(h / aspect_ratio), w), Image.BICUBIC)
-    image_pil.save(image_path)
+	if aspect_ratio > 1.0:
+		image_pil = image_pil.resize((h, int(w * aspect_ratio)), Image.BICUBIC)
+	if aspect_ratio < 1.0:
+		image_pil = image_pil.resize((int(h / aspect_ratio), w), Image.BICUBIC)
+	image_pil.save(image_path)
 
 
 def print_numpy(x, val=True, shp=False):
-    """Print the mean, min, max, median, std, and size of a numpy array
+	"""Print the mean, min, max, median, std, and size of a numpy array
 
-    Parameters:
-        val (bool) -- if print the values of the numpy array
-        shp (bool) -- if print the shape of the numpy array
-    """
-    x = x.astype(np.float64)
-    if shp:
-        print('shape,', x.shape)
-    if val:
-        x = x.flatten()
-        print('mean = %3.3f, min = %3.3f, max = %3.3f, median = %3.3f, std=%3.3f' % (
-            np.mean(x), np.min(x), np.max(x), np.median(x), np.std(x)))
-
-
-def mkdirs(paths):
-    """create empty directories if they don't exist
-
-    Parameters:
-        paths (str list) -- a list of directory paths
-    """
-    if isinstance(paths, list) and not isinstance(paths, str):
-        for path in paths:
-            mkdir(path)
-    else:
-        mkdir(paths)
-
-
-def mkdir(path):
-    """create a single empty directory if it didn't exist
-
-    Parameters:
-        path (str) -- a single directory path
-    """
-    if not os.path.exists(path):
-        os.makedirs(path)
+	Parameters:
+		val (bool) -- if print the values of the numpy array
+		shp (bool) -- if print the shape of the numpy array
+	"""
+	x = x.astype(np.float64)
+	if shp:
+		print('shape,', x.shape)
+	if val:
+		x = x.flatten()
+		print(('mean = %3.3f, min = %3.3f, "+\
+			"max = %3.3f, median = %3.3f, std=%3.3f') % (
+			np.mean(x), np.min(x), np.max(x), np.median(x), np.std(x)))

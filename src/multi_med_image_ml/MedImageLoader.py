@@ -38,8 +38,8 @@ class MedImageLoader():
 			augment = True,
 			val_ranges = {},
 			dtype="numpy",
-			Y_dim = (32,32),
-			C_dim = (32,32),
+			Y_dim = (16,32),
+			C_dim = (16,32),
 			return_obj = False,
 			channels_first = True):
 		self.channels_first = channels_first
@@ -209,6 +209,7 @@ class MedImageLoader():
 				if filename in self.image_dict:
 					X_files[i][j] = self.image_dict[filename]
 				else:
+					
 					X_files[i][j] = ImageRecord(filename,
 								dim=self.dim,
 								y_nums=[i] if len(X_files) == 1 else None,

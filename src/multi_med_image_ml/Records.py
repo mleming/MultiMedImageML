@@ -14,8 +14,8 @@ class ImageRecord():
 		extra_info_list = None,
 		y_on_c = True,
 		cache = True,
-		Y_dim = (32,32),
-		C_dim = (32,32),
+		Y_dim = (16,32),
+		C_dim = (16,32),
 		y_nums = None,
 		c_nums = None,
 		static_inputs=[]):
