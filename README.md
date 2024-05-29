@@ -38,13 +38,14 @@ The MedImageLoader builds up this representation automatically, but it is space-
 Data may be represented with a folder structure.
 
 # Dataset
+```
 .
  * [Samples](./Samples)
- * [control](./Samples/control)
- * [patient1](./Samples/control/patient1)
- * [patient2](./Samples/control/patient2)
- * [test](./Samples/test)
- * [patient3](./Samples/test/patient3)
- * [patient4](./Samples/test/patient4)
-
+   * [control](./Samples/control)
+     * [patient1](./Samples/control/patient1)
+     * [patient2](./Samples/control/patient2)
+   * [test](./Samples/test)
+     * [patient3](./Samples/test/patient3)
+     * [patient4](./Samples/test/patient4)
+```
 
