@@ -164,11 +164,13 @@ def download_weights(weights):
 			f"https://drive.google.com/uc?export=download&confirm=pbef&id={file_id}",
    	 		weights_lib_json
 		)
-	print(weights_lib_json)
 	with open(weights_lib_json,'r') as fileobj:
 		weights_lib = json.load(fileobj)
 	if weights not in weights_lib:
-		raise Exception(f"No such model: {weights}")
+		raise Exception(
+			"No such model: %s. Available options are %s" % \
+			(weights," ".join(list(weights_lib)))
+			)
 	else:
 		#download_file_from_google_drive(
 		#	weights_lib[weights],
