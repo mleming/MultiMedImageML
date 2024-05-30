@@ -147,7 +147,7 @@ class MultiInputTrainer():
 					dataloader.switch_stack()
 			else:
 				self.optimizer_reg.step()
-				self.optimizer_reg.zero_step()
+				self.optimizer_reg.zero_grad()
 				self.model.regressor_freeze()
 				if dataloader is not None:
 					dataloader.switch_stack()

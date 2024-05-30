@@ -153,7 +153,7 @@ class TestSimple(unittest.TestCase):
 			self.assertTrue(isinstance(image,np.ndarray))
 			self.assertTrue(isinstance(label,np.ndarray))
 			imsize = image.shape
-			self.assertEqual(imsize[0], 16)
+			self.assertEqual(imsize[0], 14)
 			self.assertEqual(imsize[1], 48)
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
@@ -187,7 +187,7 @@ class TestSimple(unittest.TestCase):
 		for image in medim_loader:
 			imsize = image.shape
 			self.assertEqual(len(imsize),5)
-			self.assertEqual(imsize[0], 16)
+			self.assertEqual(imsize[0], 14)
 			self.assertEqual(imsize[1], 48)
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
@@ -210,7 +210,7 @@ class TestSimple(unittest.TestCase):
 		for image,label in medim_loader:
 			imsize = image.shape
 			self.assertEqual(len(imsize),5)
-			self.assertEqual(imsize[0], 16)
+			self.assertEqual(imsize[0], 14)
 			self.assertEqual(imsize[1], 48)
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
@@ -274,7 +274,7 @@ class TestSimple(unittest.TestCase):
 			optimizer.step()
 			break
 	def test_trainer(self):
-		model = MultiInputModule(Y_dim = (17,2),C_dim=(13,11))
+		model = MultiInputModule(Y_dim = (17,4),C_dim=(13,11))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=True,
 			label=["MRAcquisitionType",
@@ -282,7 +282,7 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14,Y_dim=(17,2),C_dim=(13,11))
+			batch_size=14,Y_dim=(17,4),C_dim=(13,11))
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			#print(f"Epoch {i}")

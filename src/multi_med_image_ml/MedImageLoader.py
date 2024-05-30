@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import pandas as pd
 import torch.multiprocessing
-from utils import *
+from .utils import *
 torch.multiprocessing.set_sharing_strategy('file_system')
 import shutil
 import nibabel as nb
