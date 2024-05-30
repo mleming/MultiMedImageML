@@ -2,7 +2,7 @@
 
 name = "multi_med_image_ml"
 
-version = "0.0.1"
+version = "0.0.2"
 
 dependencies = [
   "numpy",
@@ -20,7 +20,12 @@ dependencies = [
   "dateutil",
   "sklearn",
   "pydicom",
-  "dcm2niix"
+  "dcm2niix",
+  "platformdirs",
+  "urllib",
+  "pytorch_grad_cam",
+  "requests",
+  "gdown"
 ]
 requires-python = ">=3.8"
 
