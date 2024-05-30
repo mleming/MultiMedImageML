@@ -1,4 +1,4 @@
-![ze logo](.images/logo.png)
+![ze logo](https://raw.githubusercontent.com/mleming/MultiMedImageML/main/.images/logo.png)
 
 Multi-Input Medical Image Machine Learning Toolkit
 ==================================================
@@ -15,11 +15,11 @@ To install Multi Med Image ML, simply type into a standard UNIX terminal
 Overview
 ========
 
-![ze figure](.images/model_diagram.png)
+![ze figure](https://raw.githubusercontent.com/mleming/MultiMedImageML/main/.images/model_diagram.png)
 
 The core deep learning architecture is a Pytorch model that can take in variable numbers of 3D images (between one and 14 by default), then encodes them into a numerical vector and, through an adversarial training process, creates an intermediate representation that contains information about disease biomarkers but not confounds, like patient age and scanning site.
 
-![ze regress figure](.images/regress_figure.png)
+![ze regress figure](https://raw.githubusercontent.com/mleming/MultiMedImageML/main/.images/regress_figure.png)
 
 The confound regression process essentially disguises the intermediary representation to have disease biomarker features while imitating the confounding features of other groups.
 
