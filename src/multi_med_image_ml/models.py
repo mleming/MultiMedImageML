@@ -68,39 +68,6 @@ class Reshape(nn.Module):
 	def forward(self, x):
 		return x.view(*self.target_shape)
 
-class NeuralNetwork(nn.Module):
-    def __init__(self,inp,outp):
-        super().__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(inp, 4096),
-            nn.LeakyReLU(),
-			nn.BatchNorm1d(4096),
-            nn.Linear(4096, 2048),
-            nn.LeakyReLU(),
-			nn.BatchNorm1d(2048),
-			nn.Dropout(0.5),
-			nn.Linear(2048, 1024),
-			nn.LeakyReLU(),
-			nn.BatchNorm1d(1024),
-			nn.Linear(1024, 512),
-			nn.LeakyReLU(),
-			nn.BatchNorm1d(512),
-			nn.Linear(512, 256),
-			nn.LeakyReLU(),
-			nn.BatchNorm1d(256),
-            nn.Linear(256, 64),
-			nn.LeakyReLU(),
-			nn.BatchNorm1d(64),
-			nn.Dropout(0.5),
-            nn.Linear(64, outp),
-			nn.Sigmoid(),
-        )
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
 class Encoder(nn.Module):
 	def __init__(self,latent_dim=512):
 		super(Encoder,self).__init__()
@@ -263,18 +230,18 @@ class Classifier(nn.Module):
 
 class MultiInputModule(nn.Module):
 	def __init__(self,
-				Y_dim = (16,32), # Number of labels, Number of choices
-				C_dim = (16,32), # Number of labels, Number of choices
-				n_dyn_inputs = 14,
-				n_stat_inputs = 2,
-				use_attn = False,
-				encode_age = False,
-				variational = False,
-				zero_input = False,
-				remove_uncertain = False,
+				Y_dim: tuple = (1,32), # Number of labels, Number of choices
+				C_dim: tuple = (16,32), # Number of labels, Number of choices
+				n_dyn_inputs: int = 14,
+				n_stat_inputs: int = 2,
+				use_attn: bool = False,
+				encode_age: bool = False,
+				variational: bool = False, # Makes it a variational encoder
+				zero_input: bool = False, # Repeats input into classifier or makes it zeros
+				remove_uncertain: bool = False,
 				device = torch.device('cpu'),
-				latent_dim = 128,
-				weights = None):
+				latent_dim: int = 128,
+				weights: bool = None):
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters
@@ -290,11 +257,19 @@ class MultiInputModule(nn.Module):
 		# Total number of inputs, which is used for the classifier model
 		self.n_inputs = self.n_stat_inputs + self.n_dyn_inputs
 		
-		self.Y_dim = (1,Y_dim) if isinstance(Y_dim,int) else Y_dim
-		num_heads = self.n_inputs
+		if (not isinstance(Y_dim,tuple)) or (len(Y_dim) != 2) or\
+			(not isinstance(C_dim,tuple)) or (len(C_dim) != 2):
+			raise Exception("""
+				Y_dim and C_dim must be tuples.
+				(<# labels>,<max # choices>)
+				One label with two choices: (1,2)
+			""")
+		self.Y_dim = Y_dim
 		self.C_dim = C_dim
 		self.zero_input = zero_input
 		self.remove_uncertain = remove_uncertain
+
+		# Under development
 		if self.remove_uncertain:
 			self.record_training_sample = False
 			self.num_training_samples = 300
@@ -351,7 +326,7 @@ class MultiInputModule(nn.Module):
 		else: self.regressor = None
 		
 		if weights is not None:
-			if self.C_dim ! (16,32) or self.Y_dim != (16,32):
+			if self.C_dim != (16,32) or self.Y_dim != (1,32):
 				warnings.warn(
 					"Pretrained models may not function if defaults are altered"
 					)
@@ -523,12 +498,7 @@ class MultiInputModule(nn.Module):
 			else:
 				for i,e in enumerate(self.static_record):
 					if static_input[i] not in e:
-						raise Exception(
-							"""
-								Input %s not a previous demographic
-								input (previous inputs were %s)
-							""" % (static_input[i],str(e))
-						)
+						raise Exception("Input %s not a previous demographic input (previous inputs were %s)" % (static_input[i],str(e)))
 			x_ = encode_static_inputs(static_input,d=self.latent_dim)
 			x_ = torch.tensor(x_,device = x.device)
 			x_ = torch.unsqueeze(x_,0)
@@ -561,15 +531,6 @@ class MultiInputModule(nn.Module):
 			m = m[:,r,...]
 			x,_ = self.multihead_attn(x,x,x,need_weights=False)#,attn_mask=m)
 
-		#x = self.encoder(x)
-		#x = torch.flatten(x, start_dim=1)
-		#z_mean = self.z_mean(x)
-		#z_log_sigma = self.z_log_sigma(x)
-		#z = z_mean + (z_log_sigma.exp()*self.epsilon.sample(z_mean.shape))
-		#z = nn.functional.sigmoid(z)
-		#y = self.decoder(z)
-		#self.kl = (z_mean**2 + z_log_sigma.exp()**2 - z_log_sigma - 0.5).sum()
-	
 		# Switch batch channel with layer channel prior to running classifier
 		x = torch.unsqueeze(x,-1)
 		x = x.contiguous().view([-1,1,self.latent_dim*self.n_inputs]) # 16*512 -> 1*[16*512]
@@ -598,165 +559,3 @@ class EnsembleModel(nn.Module):
 		new_output = torch.cat(new_output,dim=3)
 		new_hidden = torch.cat(new_hidden,dim=3)
 		return new_output,new_hidden
-
-class VariationalEncoder(nn.Module):
-	def __init__(self):
-		super(Encoder,self).__init__()
-		nchan=1
-		base_feat = 64
-		latent_dim = 512
-		self.encoder = nn.Sequential(
-			nn.Conv3d(in_channels = nchan, out_channels = base_feat, stride=2, kernel_size=5, padding = 2), #1*96*96*96 -> 64*48*48*48
-			nn.LeakyReLU(),
-			nn.Dropout(0.5),
-			nn.InstanceNorm3d(base_feat),
-			nn.Conv3d(in_channels = base_feat, out_channels = base_feat*2, stride=2, kernel_size = 5,padding=2), #64*48*48*48 -> 128*24*24*24
-			nn.LeakyReLU(),
-			nn.InstanceNorm3d(base_feat*2),
-			nn.Conv3d(in_channels = base_feat*2, out_channels = base_feat*4, stride=2,kernel_size = 3,padding=1), #128*24*24*24 -> 256*12*12*12
-			nn.LeakyReLU(),
-			nn.InstanceNorm3d(base_feat*4),
-			nn.Conv3d(in_channels = base_feat*4, out_channels = base_feat*4, stride=4,kernel_size = 5,padding=2), #256*12*12*12 -> 256*3*3*3
-			nn.LeakyReLU(),
-			nn.InstanceNorm3d(base_feat*4),
-			nn.Conv3d(in_channels = base_feat*4, out_channels = base_feat*32, stride=1,kernel_size = 3,padding=0), #256*3*3*3 -> 2048*1*1*1
-			nn.LeakyReLU(),
-			nn.Dropout(0.5),
-			Reshape([-1,base_feat*32]),
-			nn.Linear(in_features = base_feat*32, out_features = base_feat*16),
-			nn.LeakyReLU(),
-			nn.Linear(in_features = base_feat*16, out_features = latent_dim)
-		)
-	def forward(self, x):
-		self.z_mean = nn.Linear(64, latent_dim)
-		self.z_log_sigma = nn.Linear(64, latent_dim)
-		#self.epsilon = torch.normal(size=(1, latent_dim), mean=0, std=1.0,
-		#	device=self.device)
-		self.epsilon = torch.distributions.Normal(0, 1)
-		self.epsilon.loc = self.epsilon.loc.cuda(device)
-		self.epsilon.scale = self.epsilon.scale.cuda(device)
-		x = self.encoder(x)
-		return x
-
-	def forward(self, x):
-		x = self.encoder(x)
-		x = torch.flatten(x, start_dim=1)
-		z_mean = self.z_mean(x)
-		z_log_sigma = self.z_log_sigma(x)
-		z = z_mean + (z_log_sigma.exp()*self.epsilon.sample(z_mean.shape))
-		z = nn.functional.sigmoid(z)
-		y = self.decoder(z)
-		self.kl = (z_mean**2 + z_log_sigma.exp()**2 - z_log_sigma - 0.5).sum()
-		return y,z, z_mean, z_log_sigma
-
-
-
-class Encoder1D(nn.Module):
-	def __init__(self,input_dim,output_dim,conv=True):
-		super(Encoder1D,self).__init__()
-		base_feat = 1024
-		if conv:
-			self.encoder = nn.Sequential(
-				Reshape([-1,1,1,input_dim]),
-				nn.Conv2d(1,base_feat,kernel_size=(1,input_dim)),
-				nn.LeakyReLU(),
-				Reshape([-1,1,base_feat]),
-				nn.BatchNorm1d(1,affine=True),
-				Reshape([-1,base_feat]),
-				nn.Linear(base_feat,output_dim),
-				
-			)
-		else:
-			self.encoder = nn.Sequential(
-				#nn.Conv2d(in_channels = 1, out_channels = base_feat*4, stride=1, kernel_size=(self.latent_dim,1), padding =0), #1*96*96*96 -> 64*48*48*48
-				#Reshape([-1,self.latent_dim*self.n_inputs]),
-				nn.Linear(input_dim,input_dim//2),
-				nn.LeakyReLU(),
-				nn.BatchNorm1d(input_dim//2,affine=True),
-	
-				nn.Linear(in_features = input_dim//2, out_features = input_dim//4),
-				nn.LeakyReLU(),
-				nn.BatchNorm1d(input_dim//4,affine=True),
-				
-				nn.Linear(in_features = input_dim//4, out_features = input_dim//8),
-				nn.LeakyReLU(),
-				
-				nn.Linear(in_features = input_dim//8, out_features = output_dim),
-			)
-	def forward(self,x):
-		x = self.encoder(x)
-		return x
-
-
-class Decoder1D(nn.Module):
-	def __init__(self,input_dim,output_dim,conv=True):
-		super(Decoder1D, self).__init__()
-		base_feat = 1024
-		if conv:
-			self.decoder = nn.Sequential(
-				nn.Linear(output_dim,base_feat),
-				nn.LeakyReLU(),
-				Reshape([-1,1,base_feat]),
-				nn.BatchNorm1d(1,affine=True),
-				Reshape([-1,base_feat,1]),
-				nn.ConvTranspose1d(base_feat,1,kernel_size=input_dim)
-			)
-		else:
-			self.decoder = nn.Sequential(
-				nn.Linear(in_features = output_dim,out_features = input_dim//8),
-				nn.LeakyReLU(),
-				nn.Linear(in_features = input_dim//8,out_features = input_dim//4),
-				nn.LeakyReLU(),
-				nn.BatchNorm1d(input_dim//4,affine=True),
-				nn.Linear(in_features = input_dim//4,out_features = input_dim//2),
-				nn.LeakyReLU(),
-				nn.Linear(in_features = input_dim//2,out_features = input_dim),
-			)
-	def forward(self,x):
-		x = self.decoder(x)
-		return x
-		
-class VAE(nn.Module):
-	def __init__(self, input_dim,latent_dim=2,device=torch.device('cpu')):
-		super(VAE, self).__init__()
-		self.device = device
-		self.latent_dim = latent_dim
-		self.z_mean = nn.Linear(64, latent_dim)
-		self.z_log_sigma = nn.Linear(64, latent_dim)
-		#self.epsilon = torch.normal(size=(1, latent_dim), mean=0, std=1.0,
-		#	device=self.device)
-		self.epsilon = torch.distributions.Normal(0, 1)
-		self.epsilon.loc = self.epsilon.loc.cuda(device)
-		self.epsilon.scale = self.epsilon.scale.cuda(device)
-		self.encoder = Encoder1D(input_dim,64)
-		self.decoder = Decoder1D(input_dim,latent_dim)
-		
-	#	self.reset_parameters()
-	  
-	def reset_parameters(self):
-		for weight in self.parameters():
-			stdv = 1.0 / math.sqrt(weight.size(0))
-			torch.nn.init.uniform_(weight, -stdv, stdv)
-
-	def forward(self, x):
-		x = self.encoder(x)
-		x = torch.flatten(x, start_dim=1)
-		z_mean = self.z_mean(x)
-		z_log_sigma = self.z_log_sigma(x)
-		z = z_mean + (z_log_sigma.exp()*self.epsilon.sample(z_mean.shape))
-		#z = nn.functional.sigmoid(z)
-		y = self.decoder(z)
-		self.kl = (z_mean**2 + z_log_sigma.exp()**2 - z_log_sigma - 0.5).sum()
-		return y,z, z_mean, z_log_sigma
-
-class AutoEncoder1D(nn.Module):
-	def __init__(self,input_dim,latent_dim=2,device=torch.device('cpu')):
-		super(AutoEncoder1D,self).__init__()
-		
-		self.encoder = Encoder1D(input_dim,latent_dim).cuda(device)
-		self.decoder = Decoder1D(input_dim,latent_dim).cuda(device)
-		
-	def forward(self,x):
-		latent = self.encoder(x)
-		x = self.decoder(latent)
-		return latent,x

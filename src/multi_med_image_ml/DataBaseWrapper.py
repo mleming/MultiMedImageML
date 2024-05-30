@@ -14,7 +14,10 @@ class DataBaseWrapper():
 					labels=[],
 					confounds=[],
 					dim=None,
-					cdim=None):
+					cdim=None,
+					path_func = path_func_default):
+		self.path_func = path_func
+		check_path_func(self.path_func)
 
 		self.filename = filename
 		self.dim = dim
@@ -207,6 +210,7 @@ class DataBaseWrapper():
 		return self.parse_date(d)
 	
 	def loc_val(self,fkey,c):
+		fkey = self.path_func(fkey)
 		try:
 			return self.all_vars.loc[fkey,c]
 		except KeyError:
@@ -234,8 +238,7 @@ class DataBaseWrapper():
 				if not os.path.isfile(json_file):
 					return
 		npy_file = get_dim_str(nifti_file,self.dim)
-		#if not os.path.isfile(npy_file):
-		#	return
+		
 		if npy_file not in self.jdict and npy_file not in self.all_vars.index:
 			with open(json_file,'r') as fileobj:
 				json_dict = json.load(fileobj)
@@ -249,6 +252,9 @@ class DataBaseWrapper():
 			self.columns = self.columns.union(set(json_dict))
 			self.jdict.append(json_dict)
 			assert(len(self.jdict) > 0)
+	def get_file_list(self):
+		return [self.path_func(str(_),reverse=True) \
+			for _ in self.all_vars.index]
 	def out_dataframe(self,fkey_ass = None):
 		if len(self.jdict) > 0:
 			out = pd.DataFrame(self.jdict,columns = list(self.columns))
@@ -269,9 +275,17 @@ class DataBaseWrapper():
 			if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
 			self.jdict = []
 	def stack_list_by_label(self,filename_list,label):
-		assert(label in self.labels)
-		lnum = self.labels.index(label)
-		lencodes = [self.get_label_encode(f)[lnum] for f in filename_list]
+		if label in self.labels:
+			sel_list = self.labels
+		elif label in self.confounds:
+			sel_list = self.confounds
+		else:
+			raise Exception("%s not in labels or confounds")
+		lnum = sel_list.index(label)
+		if label in self.labels:
+			lencodes = [self.get_label_encode(f)[lnum] for f in filename_list]
+		elif label in self.confounds:
+			lencodes = [self.get_confound_encode(f)[lnum] for f in filename_list]
 		filename_list_stack = [[] for _ in range(len(np.unique(lencodes)))]
 		for filename,l in zip(filename_list,lencodes):
 			filename_list_stack[l].append(filename)

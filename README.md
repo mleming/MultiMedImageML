@@ -26,18 +26,15 @@ The confound regression process essentially disguises the intermediary represent
 Getting Started
 ===============
 
-For best performance, download [https://github.com/rordenlab/dcm2niix](dcm2niix). This is the best program I've found for generally converting DICOMs into NIFTIs, but it's a UNIX command line program, not Python, so it needs to be installed separately.
-
 Datasets
 ========
 
-This may be used with either public benchmark datasets of brain images or internal hospital records, so long as they're represented as DICOM or NIFTI images. If they're represented as DICOM images, they are converted to NIFTI with metadata represented as a JSON file using [https://github.com/rordenlab/dcm2niix](dcm2niix). They may be further converted to NPY files, which are resized to a specific dimension, with the metadata represented in a pandas dataframe.
+This may be used with either public benchmark datasets of brain images or internal hospital records, so long as they're represented as DICOM or NIFTI images. It was largely tested on [https://adni.loni.usc.edu/data-samples/access-data/](ADNI) and data internal to MGH. If they're represented as DICOM images, they are converted to NIFTI with metadata represented as a JSON file using [https://github.com/rordenlab/dcm2niix](dcm2niix). They may be further converted to NPY files, which are resized to a specific dimension, with the metadata represented in a pandas dataframe.
 
 The MedImageLoader builds up this representation automatically, but it is space-intensive to do so.
 
 Data may be represented with a folder structure.
 
-# Dataset
 ```
 .
 └── control
@@ -74,6 +71,9 @@ Data may be represented with a folder structure.
 
 ```
 
-In the case of the above folder structure, "/path/to/control" may simply be input into the MedImageLoader function. For multiple labels, "/path/to/test" may also be input.
+In the case of the above folder structure, "/path/to/control" may simply be input into the MedImageLoader function. For multiple labels, "/path/to/test", "/path/to/test2", and so on, may also be input.
+
+Confound representation
+=======================
 
 

@@ -138,7 +138,7 @@ class MultiInputTrainer():
 					float(loss_regressor),len(self.pids_read),
 					len(self.x_files_read),self.name))
 
-		if self.index % self.batch_size == 0:
+		if self.index % self.batch_size == 0 and self.index != 0:
 			if self.one_step:
 				self.optimizer.step()
 				self.optimizer.zero_grad()
@@ -151,7 +151,7 @@ class MultiInputTrainer():
 				self.model.regressor_freeze()
 				if dataloader is not None:
 					dataloader.switch_stack()
-		
+			self.one_step = not self.one_step
 		if self.index % self.save_latest_freq == 0 and self.index != 0:
 			if self.checkpoint_dir is not None:
 				torch.save(

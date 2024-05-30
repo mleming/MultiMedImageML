@@ -16,18 +16,21 @@ from nibabel.filebasedimages import *
 from Records import BatchRecord,ImageRecord
 from DataBaseWrapper import DataBaseWrapper
 
+# Translates a filename to a key and back, for storing files as keys in the
+# pandas dataframe. By default, the keys are the full filepaths. This function
+# may need to be changed when switching to different systems
+def path_func_default(fkey,reverse=False):
+	return fkey
+
 class MedImageLoader():
 	def __init__(self,*image_folders,
 			pandas_cache = '../pandas/',
 			cache = True,
-			path_func = None,
+			path_func = path_func_default,
 			batch_by_pid=True,
-			return_as_patient_record=False,
 			file_record_name=None,
-			n_out_y=None,
-			forcealt=True,
 			all_vars = None,
-			batch_size = 16,
+			batch_size = 14,
 			dim = (96,96,96),
 			get_encoded = False,
 			static_inputs = None,
@@ -37,11 +40,12 @@ class MedImageLoader():
 			group_by = None,
 			augment = True,
 			val_ranges = {},
-			dtype="numpy",
-			Y_dim = (16,32),
+			dtype="torch",
+			Y_dim = (1,32),
 			C_dim = (16,32),
 			return_obj = False,
-			channels_first = True):
+			channels_first = True,
+			recycle=True):
 		self.channels_first = channels_first
 		self.image_folders = image_folders
 		self.augment = augment
@@ -52,19 +56,22 @@ class MedImageLoader():
 		self.val_ranges = val_ranges
 		self.get_encoded = get_encoded
 		self.batch_by_pid = group_by is not None
-		self.return_as_patient_record = return_as_patient_record
 		self.file_list_dict = {}
 		self.static_inputs = static_inputs
 		self.label = label
 		self.confounds = confounds
-		self.path_func = path_func
 		self.group_by = group_by
-		self.n_out_y = n_out_y # Set dimension for Y
-		self.forcealt = forcealt
 		self.Y_dim = Y_dim
 		self.C_dim = C_dim
 		self.mode = None
 		
+		# If set to true, restacks images every time via the data 
+		# matching function. Best for very large and imbalanced datasets
+		self.recycle=recycle
+		
+		self.path_func = path_func
+		check_path_func(self.path_func)
+
 		# Stores images so that they aren't repeated in different stacks
 		self.image_dict = {}
 		# If true, this uses one match confound at a time and cycles through
@@ -92,7 +99,8 @@ class MedImageLoader():
 					filename=self.all_vars_file,
 					labels=self.label,
 					confounds=self.confounds,
-					dim=self.dim)
+					dim=self.dim,
+					path_func=self.path_func)
 		if not self.pickle_input():
 			self.build_pandas_database()
 		self.all_vars.build_metadata()
@@ -103,8 +111,6 @@ class MedImageLoader():
 		else:
 			self.mode = "iterate"
 		
-		#if self.Y_dim is None:
-		#	self.Y_dim = (len(self.labels)
 		
 		# For outputting the records of files that were read in
 		self.file_record_name = file_record_name 
@@ -113,9 +119,7 @@ class MedImageLoader():
 			fd = os.path.join(wd,'json','dataloader_records')
 			if not os.path.isdir(fd): os.makedirs(fd)
 			self.file_record_output = os.path.join(fd,file_record_name)
-		
-		if self.path_func is None:
-			self.path_func = lambda k: k
+
 		self.uniques = None
 		self.n_buckets = 3
 		self.rmatch_confounds = self.confounds
@@ -127,7 +131,6 @@ class MedImageLoader():
 		self.file_list_dict_hidden = {}
 		self.match_confounds_hidden = []
 		self.mode_hidden = "iterate"
-		self.forcealt_hidden = False
 		if self.return_labels():
 			for l in self.label:
 				if l not in self.val_ranges:
@@ -168,10 +171,10 @@ class MedImageLoader():
 		return tl
 	def get_file_list(self):
 		if self.pickle_input() and self.tl() == "Folder":
-			return [[str(_) for _ in self.all_vars.all_vars.index]]
+			return [[str(_) for _ in self.all_vars.get_file_list()]]
 		if self.mode == "iterate":
 			if self.pickle_input():
-				fname_list = [str(_) for _ in self.all_vars.all_vars.index]
+				fname_list = [str(_) for _ in self.all_vars.get_file_list()]
 				return self.all_vars.stack_list_by_label(fname_list,self.tl())
 			else:
 				all_filename_lists = []
@@ -277,7 +280,6 @@ class MedImageLoader():
 			self.file_list_dict_hidden,self.file_list_dict
 		self.match_confounds,self.match_confounds_hidden = \
 			self.match_confounds_hidden,self.match_confounds
-		self.forcealt,self.forcealt_hidden = self.forcealt_hidden,self.forcealt
 		self.mode,self.mode_hidden = self.mode_hidden,self.mode
 	def __next__(self):
 		if len(self) == 0: self.load_image_stack()
@@ -298,7 +300,7 @@ class MedImageLoader():
 					self.file_list_dict[self.tl()][b]
 				try:
 					if self.cache: assert self.all_vars is not None
-					img = im.get_image()
+					img = im.get_image(augment=self.augment)
 					temp.append(im)
 					self.index += 1
 					break

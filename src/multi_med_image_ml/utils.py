@@ -35,6 +35,17 @@ def compile_dicom_py(dicom_folder):
 import platform
 platform_system = platform.system()
 
+def path_func_default(filename,reverse=False):
+	return filename
+
+def check_path_func(path_func):
+	if path_func(path_func(os.path.realpath(__file__)),reverse=True) \
+		!= os.path.realpath(__file__):
+		raise Exception("""
+			path_func must be a function that translates
+			a filename to an index key and back with the
+			'reverse' option input""")
+
 """
 Uses dcm2niix, since that's had the best results overall when converting dicom
 to nifti, even though it's a UNIX command

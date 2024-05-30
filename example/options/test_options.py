@@ -11,7 +11,6 @@ class TestOptions(BaseOptions):
 		parser = BaseOptions.initialize(self, parser)  # define shared options
 		parser.add_argument('--val_ranges',default={'InstitutionNameSimplified':['BWH','OTHER']},help="What stuff to load into the training set")
 		#parser.add_argument('--val_ranges',default={'AlzStage':['CONTROL','AD'],'InstitutionNameSimplified':['BWH','OTHERS'],'MRModality':['T1'],'Angle':['AX']},help="What stuff to load into the test set")
-		parser.add_argument('--results_dir', type=str, default='./results/', help='saves results here.')
 		parser.add_argument('--aspect_ratio', type=float, default=1.0, help='aspect ratio of result images')
 		parser.add_argument('--phase', type=str, default='test', help='train, val, test, etc')
 		parser.add_argument('--save_net',default=False,action='store_true',help="Saves the full netG_A and netG_B models for loading later")

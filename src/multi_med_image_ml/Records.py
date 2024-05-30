@@ -3,6 +3,15 @@ import numpy as np
 from monai.transforms import *
 from utils import *
 
+generate_transforms = Compose([
+		RandAffine(prob=0.5, translate_range=10), 
+		RandRotate(prob=0.5, range_x=10.0),
+		RandGaussianNoise(prob=0.5),
+		RandBiasField(prob=0.5)])
+#,
+#		RandSmoothDeform(spatial_size=(96,96,96),rand_size=(96,96,96))
+#])
+
 @functools.total_ordering
 class ImageRecord():
 	def __init__(self,
@@ -54,7 +63,6 @@ class ImageRecord():
 		
 		self.cache = cache
 		self.cached_record = None
-	
 	def get_exam_date(self):
 		if not self.loaded:
 			self.load_extra_info()
@@ -77,7 +85,9 @@ class ImageRecord():
 		if self.static_input_res is None:
 			self.static_input_res = []
 			for key in self.static_inputs:
-				static_inputs.append(self.all_vars.all_vars.loc[self.fkey,key])
+				static_inputs.append(
+					self.all_vars.loc_val(self.fkey,key)
+				)
 		return self.static_input_res
 	def _is_valid_operand(self, other):
 		return hasattr(other, "exam_date") and hasattr(other,"group_by")
@@ -174,11 +184,13 @@ class ImageRecord():
 			self.all_vars.add_json(nifti_file=self.filename)
 		if self.dtype == "torch":
 			self.image = torch.tensor(self.image)
-	def get_image(self):
+	def get_image(self,augment=False):
 		if self.image is None:
 			self.read_image()
 		self.load_extra_info()
-		return self.image
+		if augment and self.dtype == "torch":
+			return generate_transforms(self.image)
+		else: return self.image
 	def _get_Y(self):
 		"""Returns label"""
 		if self.y_nums is not None:
@@ -271,13 +283,13 @@ class BatchRecord():
 	
 	def name(self):
 		return 'BatchRecord'
-	def _get(self,callback):
+	def _get(self,callback,augment=False):
 		Xs = []
 		no_arr = False
 		for im in (self.image_records if (callback != "Y" and not self.batch_by_pid)\
 			else [self.image_records[-1]]):
 			if callback == "X":
-				X = im.get_image()
+				X = im.get_image(augment=augment)
 				if self.dtype == "torch":
 					assert(len(X.size()) == 3)
 					if self.channels_first:
@@ -327,8 +339,8 @@ class BatchRecord():
 			return Xs #.astype(np.float32)
 		else:
 			raise Exception("Invalid dtype: %s" % self.dtype)
-	def get_image(self):
-		return self._get("X")
+	def get_image(self,augment=False):
+		return self._get("X",augment=augment)
 	def get_Y(self):
 		return self._get("Y")
 	def get_C(self):
@@ -341,12 +353,4 @@ class BatchRecord():
 		return self._get("birth_dates")
 	def get_static_inputs(self):
 		return self._get("static_inputs")
-
-generate_transforms = Compose([
-		RandAffine(prob=0.5, translate_range=10), 
-		RandRotate(prob=0.5, range_x=10.0),
-		RandGaussianNoise(prob=0.5),
-		RandBiasField(prob=0.5),
-		RandSmoothDeform(spatial_size=(96,96,96),rand_size=(96,96,96))
-])
 

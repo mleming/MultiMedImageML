@@ -49,7 +49,6 @@ def clear_files():
 
 class TestSimple(unittest.TestCase):
 	def test_dicom_compile(self):
-		return
 		nifti_file,json_file = compile_dicom(im1)
 		self.assertTrue(os.path.isfile(nifti_file))
 		self.assertEqual(os.path.splitext(nifti_file)[1], ".gz")
@@ -70,14 +69,12 @@ class TestSimple(unittest.TestCase):
 		if os.path.splitext(nifti_file2)[1] == ".gz":
 			os.remove(nifti_file2)
 	def test_single_im_load(self):
-		return
 		im = ImageRecord(im1,dim=(24,48,32),cache=False)
 		img = im.get_image()
 		self.assertEqual(img.shape[0], 24)
 		self.assertEqual(img.shape[1], 48)
 		self.assertEqual(img.shape[2], 32)
 	def test_cache(self):
-		return
 		im = ImageRecord(im1,dim=(33,16,3),cache=True)
 		img = im.get_image()
 		self.assertEqual(img.shape[0], 33)
@@ -89,14 +86,12 @@ class TestSimple(unittest.TestCase):
 		if os.path.isfile(im.cached_record):
 			os.remove(im.cached_record)
 	def test_single_nifti_load(self):
-		return
 		im = ImageRecord(nifti_im,dim=(4,5,6),cache=True)
 		img = im.get_image()
 		self.assertEqual(img.shape[0], 4)
 		self.assertEqual(img.shape[1], 5)
 		self.assertEqual(img.shape[2], 6)
 	def test_npy_load(self):
-		return
 		#self.assertTrue(os.path.isfile(npy_im))
 		im = ImageRecord(npy_im,dim=(4,5,6))
 		img = im.get_image()
@@ -104,7 +99,6 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(img.shape[1], 5)
 		self.assertEqual(img.shape[2], 6)	
 	def test_single_nifti_load_torch(self):
-		return
 		im = ImageRecord(nifti_im,dim=(4,5,6),cache=False,
 			dtype='torch')
 		img = im.get_image()
@@ -113,7 +107,6 @@ class TestSimple(unittest.TestCase):
 		self.assertEqual(img.size()[1], 5)
 		self.assertEqual(img.size()[2], 6)
 	def test_basic_load_torch(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
@@ -131,7 +124,6 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 	def test_basic_load_numpy(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
@@ -149,7 +141,6 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 	def test_pandas(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
@@ -182,7 +173,6 @@ class TestSimple(unittest.TestCase):
 					self.assertTrue(fpath in df.index)
 		
 	def test_pandas_2(self):
-		return
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			dim=(48,32,24),
 			cache=True,
@@ -203,7 +193,6 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[3], 24)
 	
 	def test_match_label_confounds(self):
-		return
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			dim=(48,32,24),
 			cache=True,
@@ -226,7 +215,6 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 	def test_grouping(self):
-		return
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			dim=(48,32,24),
 			cache=True,
@@ -255,7 +243,6 @@ class TestSimple(unittest.TestCase):
 		C_dud = patient.get_C_dud()
 		Y = patient.get_Y()
 	def test_more(self):
-		return
 		medim_loader = MedImageLoader(imfolder1)
 		for image in medim_loader:
 			imsize = image.shape
@@ -263,7 +250,6 @@ class TestSimple(unittest.TestCase):
 		for image in medim_loader:
 			continue
 	def test_model(self):
-		return
 		model = MultiInputModule(Y_dim=(32,32),C_dim=(32,32))
 		#medim_loader = MedImageLoader(imfolder1,imfolder2,
 		#	cache=True)
@@ -283,18 +269,11 @@ class TestSimple(unittest.TestCase):
 		for p in medim_loader:
 			optimizer.zero_grad()
 			y_pred,y_reg = model(p)
-			print("y_pred")
-			print(y_pred.size())
-			print("y_reg")
-			print(y_reg.size())
-			print("p.get_Y()")
-			print(p.get_Y().size())
 			loss = loss_function(p.get_Y(),y_pred)
 			loss.backward()
 			optimizer.step()
 			break
 	def test_trainer(self):
-		return
 		model = MultiInputModule(Y_dim = (17,2),C_dim=(13,11))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=True,
@@ -325,8 +304,24 @@ class TestSimple(unittest.TestCase):
 			#print(f"Epoch {i}")
 			for p in medim_loader:
 				trainer.loop(p,dataloader=medim_loader)	
+
+	def test_dyn_input(self):
+		model = MultiInputModule(Y_dim = (13,14),C_dim=(19,21))
+		medim_loader = MedImageLoader(imfolder1,imfolder2,
+			cache=False,
+			label=["MRAcquisitionType",
+					"Manufacturer"],
+			confounds=["Slice Thickness","Repetition Time"],
+			return_obj = True,
+			dtype="torch",
+			batch_size=14,Y_dim = (13,14),C_dim=(19,21),
+			static_inputs = ["User Data 7","Slice Thickness"])
+		trainer = MultiInputTrainer(model,batch_size=2)
+		for i in range(3):
+			for p in medim_loader:
+				trainer.loop(p,dataloader=medim_loader)
+
 	def test_cache3(self):
-		return
 		model = MultiInputModule((11,17),C_dim=(23,5))
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			cache=True,
@@ -344,7 +339,6 @@ class TestSimple(unittest.TestCase):
 					verbose = False,
 					save_latest_freq = 1)
 		for i in range(3):
-			#print(f"Epoch {i}")
 			for p in medim_loader:
 				trainer.loop(p,dataloader=medim_loader)	
 	def test_weight_download(self):
