@@ -396,14 +396,20 @@ class MultiInputModule(nn.Module):
 			if isinstance(x,BatchRecord):
 				assert(x.dtype == "torch")
 				if len(x.get_static_inputs()[0]) > 0:
-					print(x.get_static_inputs())
 					static_inputs = [_[0] for _ in x.get_static_inputs()]
 					if self.n_stat_inputs != len(static_inputs):
 						raise Exception(
 					"Number of static inputs not equal to input: %d != %d"\
 						 % (len(static_inputs),self.n_stat_inputs))
 				dates1 = x.get_exam_dates()
-				bdate1 = x.get_birth_dates()[0]
+				for d in dates1:
+					if d is None:
+						raise Exception("Dates cannot be none")
+				bdates = x.get_birth_dates()
+				for b in bdates:
+					if b is None:
+						raise Exception("Birth dates cannot be none")
+				bdate1 = bdates[0]
 				x = x.get_image()
 				assert(torch.is_tensor(x))
 				
@@ -548,14 +554,11 @@ class EnsembleModel(nn.Module):
 		new_hidden = []
 		for i in range(hidden.size()[3]):
 			model = self.models[i]
-			#print("input.size(): %s" % str(input.size()))
 			x = model.Encoder(input)
 			x = torch.unsqueeze(x,1).float()
 			output,h = model.RNN(x,hidden[...,i])
 			new_output.append(torch.unsqueeze(output,3))
 			new_hidden.append(torch.unsqueeze(h,3))
-			#print("output.size(): %s" % str(output.size()))
-			#print("h.size(): %s" % str(h.size()))
 		new_output = torch.cat(new_output,dim=3)
 		new_hidden = torch.cat(new_hidden,dim=3)
 		return new_output,new_hidden

@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 from .utils import *
+from .Records import ImageRecord
 import dateutil
 
 class DataBaseWrapper():
@@ -15,9 +16,9 @@ class DataBaseWrapper():
 					confounds=[],
 					dim=None,
 					cdim=None,
-					path_func = path_func_default):
-		self.path_func = path_func
-		check_path_func(self.path_func)
+					key_to_filename = key_to_filename_default):
+		self.key_to_filename = key_to_filename
+		check_key_to_filename(self.key_to_filename)
 
 		self.filename = filename
 		self.dim = dim
@@ -40,12 +41,14 @@ class DataBaseWrapper():
 		if isinstance(self.all_vars,str) and os.path.isfile(self.all_vars)\
 			 and os.path.splitext(self.all_vars)[1] == ".pkl":
 			self.all_vars = pd.read_pickle(self.all_vars)
-	
+	def has_im(self,im: ImageRecord):
+		fkey = self.key_to_filename(im.npy_file,reverse=True)
+		return fkey in self.all_vars.index
 	def build_metadata(self):
 		for l in self.labels:
 			if l not in self.all_vars.columns:
-				print("%s was dead the whole time" % l)
-				print(self.all_vars)
+				print("%s not in all_vars.columns" % l)
+				print(self.all_vars.columns)
 			assert(l in self.all_vars.columns)
 		for c in self.confounds:
 			assert(c in self.all_vars.columns)
@@ -117,8 +120,9 @@ class DataBaseWrapper():
 				self.uniques[c]["nonnan_list"][0] = min_
 				assert(len(self.uniques[c]["nonnan_list"]) == \
 					self.n_buckets_cont)
-	def get_confound_encode(self,filename: str):
-		confound_strs = [self.loc_val(filename,c) for c in self.confounds]
+	def get_confound_encode(self,npy_file: str):
+		assert(os.path.splitext(npy_file)[1] == ".npy")
+		confound_strs = [self.loc_val(npy_file,c) for c in self.confounds]
 		cnum_list = []
 		for j,c in enumerate(self.confounds):
 			if self.uniques[c]["discrete"]:
@@ -141,8 +145,9 @@ class DataBaseWrapper():
 							break
 		assert(len(cnum_list) == len(self.confounds))
 		return cnum_list
-	def get_label_encode(self,filename: str):
-		label_strs = [self.loc_val(filename,c) for c in self.labels]
+	def get_label_encode(self,npy_file: str):
+		assert(os.path.splitext(npy_file)[1] == ".npy")
+		label_strs = [self.loc_val(npy_file,c) for c in self.labels]
 		cnum_list = []
 		for j,c in enumerate(self.labels):
 			if self.uniques[c]["discrete"]:
@@ -165,53 +170,49 @@ class DataBaseWrapper():
 							break
 		assert(len(cnum_list) == len(self.labels))
 		return cnum_list
-	def _get_val(self,fkey: str,potential_columns):
+	def _get_val(self,npy_file: str,potential_columns):
 		assert(np.all([isinstance(_,str) for _ in potential_columns]))
 		val = None
 		#fkey = get_dim_str(filename,dim=self.dim)
 		for c in potential_columns:
 			if c in self.columns:
-				val = self.loc_val(fkey,c)
-				assert(fkey in self.all_vars.index)
-				#if not isinstance(val,str):
-				#	print("fffffffffffff")
-				#	print(val)
-				#	print(type(val))
-				#	print("ddddddddddddd")
+				val = self.loc_val(npy_file,c)
 				if not(is_nan(val) or isinstance(val,str)):
 					print(val)
 				assert(is_nan(val) or isinstance(val,str))
-				#val = str(val)
-				#print("-----")
-				#print(c)
-				#print(fkey)
-				#print("******")
-				#print(val)
-				#print("AAAAAAAA")
 				if not is_nan(val):
 					break
 		
 		return val
-	def get_ID(self,fkey):
-		id = self._get_val(fkey,["PatientID","Patient ID"])
+	def get_ID(self,npy_file):
+		id = self._get_val(npy_file,["PatientID","Patient ID"])
 		return id
-	def parse_date(self,d):
+	def parse_date(self,d,date_format="%Y-%m-%d %H:%M:%S"):
 		if is_nan(d):
 			return datetime.datetime(year=1970,month=1,day=1)
 		elif is_float(d):
 			return dateutil.parser.parse(str(d))
 		else:
-			return dateutil.parser.parse(d)
-	def get_exam_date(self,fkey: str) -> datetime.date:
-		d = self._get_val(fkey,["ExamEndDTS","Acquisition Date"])
+			try:
+				return datetime.datetime.strptime(
+					d.replace("_"," ").split(".")[0],
+					date_format)
+			except ValueError:
+				return dateutil.parser.parse(d.replace("_"," "))
+	def get_exam_date(self,npy_file: str) -> datetime.date:
+		d = self._get_val(npy_file,["ExamEndDTS","Acquisition Date"])
 		return self.parse_date(d)
-	def get_birth_date(self,fkey):
-		d = self._get_val(fkey,["BirthDTS"])
+	def get_birth_date(self,npy_file: str) -> datetime.date:
+		d = self._get_val(npy_file,["BirthDTS"])
 		return self.parse_date(d)
 	
-	def loc_val(self,fkey,c):
-		fkey = self.path_func(fkey)
+	def loc_val(self,npy_file,c):
+		fkey = self.key_to_filename(npy_file,reverse=True)
 		try:
+			if fkey not in self.all_vars.index:
+				print("Error - %s not present in index. Adding..." % fkey)
+			#assert(fkey in self.all_vars.index)
+			
 			return self.all_vars.loc[fkey,c]
 		except KeyError:
 			nifti_file = get_dim_str(fkey,dim=self.dim,outtype=".nii.gz")
@@ -238,12 +239,12 @@ class DataBaseWrapper():
 				if not os.path.isfile(json_file):
 					return
 		npy_file = get_dim_str(nifti_file,self.dim)
-		
-		if npy_file not in self.jdict and npy_file not in self.all_vars.index:
+		fkey = self.key_to_filename(npy_file,reverse=True)
+		if fkey not in self.jdict and fkey not in self.all_vars.index:
 			with open(json_file,'r') as fileobj:
 				json_dict = json.load(fileobj)
-			json_dict["fkey"] = npy_file
-			json_dict["filename"] = npy_file
+			json_dict["fkey"] = fkey
+			json_dict["filename"] = fkey
 			for item in json_dict:
 				if isinstance(json_dict[item],list):
 					json_dict[item] = "_".join(
@@ -253,9 +254,10 @@ class DataBaseWrapper():
 			self.jdict.append(json_dict)
 			assert(len(self.jdict) > 0)
 	def get_file_list(self):
-		return [self.path_func(str(_),reverse=True) \
+		return [self.key_to_filename(str(_)) \
 			for _ in self.all_vars.index]
 	def out_dataframe(self,fkey_ass = None):
+		
 		if len(self.jdict) > 0:
 			out = pd.DataFrame(self.jdict,columns = list(self.columns))
 			out.set_index("fkey",inplace=True)

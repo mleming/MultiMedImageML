@@ -23,7 +23,7 @@ class ImageRecord():
 		extra_info_list = None,
 		y_on_c = True,
 		cache = True,
-		Y_dim = (16,32),
+		Y_dim = (1,32),
 		C_dim = (16,32),
 		y_nums = None,
 		c_nums = None,
@@ -31,7 +31,7 @@ class ImageRecord():
 		
 		self.dim=dim
 		self.filename = filename
-		self.fkey = get_dim_str(self.filename,self.dim)
+		self.npy_file = get_dim_str(self.filename,self.dim)
 		self.image_type = None
 		self.dtype = dtype
 		self.all_vars = all_vars
@@ -58,7 +58,7 @@ class ImageRecord():
 		
 		self.loaded = False
 		if self.all_vars is not None:
-			if self.fkey in self.all_vars.all_vars:
+			if self.npy_file in self.all_vars.all_vars:
 				self.load_extra_info()
 		
 		self.cache = cache
@@ -75,18 +75,18 @@ class ImageRecord():
 		if self.loaded: return
 		if self.all_vars is None:
 			return
-		if self.fkey not in self.all_vars.all_vars.index:
+		if not self.all_vars.has_im(self):
 			return
-		self.bdate = self.all_vars.get_birth_date(self.fkey)
-		self.exam_date = self.all_vars.get_exam_date(self.fkey)
-		self.group_by = self.all_vars.get_ID(self.fkey)
+		self.bdate = self.all_vars.get_birth_date(self.npy_file)
+		self.exam_date = self.all_vars.get_exam_date(self.npy_file)
+		self.group_by = self.all_vars.get_ID(self.npy_file)
 		self.loaded = True
 	def get_static_inputs(self):
 		if self.static_input_res is None:
 			self.static_input_res = []
 			for key in self.static_inputs:
 				static_inputs.append(
-					self.all_vars.loc_val(self.fkey,key)
+					self.all_vars.loc_val(self.npy_file,key)
 				)
 		return self.static_input_res
 	def _is_valid_operand(self, other):
@@ -195,13 +195,13 @@ class ImageRecord():
 		"""Returns label"""
 		if self.y_nums is not None:
 			return self.y_nums
-		self.y_nums = self.all_vars.get_label_encode(self.fkey)
+		self.y_nums = self.all_vars.get_label_encode(self.npy_file)
 		return self.y_nums
 	def _get_C(self):
 		"""Returns confound array"""
 		if self.c_nums is not None:
 			return self.c_nums
-		self.c_nums = self.all_vars.get_confound_encode(self.fkey)
+		self.c_nums = self.all_vars.get_confound_encode(self.npy_file)
 		return self.c_nums
 	def get_Y(self):
 		if self.Y is not None:
@@ -249,7 +249,8 @@ class BatchRecord():
 			device=None,
 			sort=True,
 			batch_by_pid=False,
-			channels_first = True):
+			channels_first = True,
+			gpu_ids=""):
 		self.image_records = image_records
 		assert(
 			np.all(
@@ -258,8 +259,8 @@ class BatchRecord():
 				]
 				)
 			)
+		self.gpu_ids = gpu_ids
 		self.channels_first = channels_first
-
 		self.batch_by_pid=batch_by_pid
 		if sort: self.image_records = sorted(image_records)
 		#assert(
@@ -333,7 +334,10 @@ class BatchRecord():
 			return Xs
 		elif self.dtype == "torch":
 			Xs = torch.concatenate(Xs,0)
-			return Xs.float()
+			if self.gpu_ids == "":
+				return Xs.float()
+			else:
+				return Xs.float().cuda(self.gpu_ids[0])
 		elif self.dtype == "numpy":
 			Xs = np.concatenate(Xs,axis=0)
 			return Xs #.astype(np.float32)

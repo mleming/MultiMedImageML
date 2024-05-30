@@ -35,14 +35,14 @@ def compile_dicom_py(dicom_folder):
 import platform
 platform_system = platform.system()
 
-def path_func_default(filename,reverse=False):
+def key_to_filename_default(filename,reverse=False):
 	return filename
 
-def check_path_func(path_func):
-	if path_func(path_func(os.path.realpath(__file__),reverse=False),reverse=True) \
+def check_key_to_filename(key_to_filename):
+	if key_to_filename(key_to_filename(os.path.realpath(__file__),reverse=False),reverse=True) \
 		!= os.path.realpath(__file__):
 		raise Exception("""
-			path_func must be a function that translates
+			key_to_filename must be a function that translates
 			a filename to an index key and back with the
 			'reverse' option input""")
 
@@ -337,7 +337,9 @@ def resize_np(nifti_data,dim):
 		if len(nifti_data.shape) != len(dim):
 			nifti_data = np.squeeze(np.mean(nifti_data,axis=-1))
 		assert(len(nifti_data.shape) == len(dim))
-	if nifti_data.shape != dim:
+	if nifti_data.shape != tuple(dim):
+		print(nifti_data.shape)
+		print(dim)
 		zp = [dim[i]/nifti_data.shape[i] for i in range(len(dim))]
 		nifti_data = ndimage.zoom(nifti_data,zp)
 	return nifti_data
@@ -802,15 +804,15 @@ def determine_random_partition(arr2d,labels):
 def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 		return_as_strs = False,unique_test_vals = None,all_vars=None,
 		return_choice_arr = False,dict_obj=None,return_as_dict=False,
-		path_func = None,X_encoder=None,vae_encoder=False,uniques=None,
+		key_to_filename = None,X_encoder=None,vae_encoder=False,uniques=None,
 		density_confound_sort=True,n_buckets=3):
 	if dict_obj is not None:
 		if "uniques" in dict_obj:
 			uniques = dict_obj["uniques"]
 	if all_vars is None and test_variable is not None:
 		all_vars = pd.read_pickle(pandas_output)
-	if path_func is not None:
-		X_filenames_list = [path_func(_) for _ in filename_list]
+	if key_to_filename is not None:
+		X_filenames_list = [key_to_filename(_) for _ in filename_list]
 	else:
 		X_filenames_list = filename_list
 	selection = np.array([os.path.isfile(_) for _ in X_filenames_list],

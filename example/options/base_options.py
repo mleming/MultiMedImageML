@@ -17,7 +17,7 @@ class BaseOptions():
 	def initialize(self, parser):
 		"""Define the common options that are used in both training and test."""
 		# basic parameters
-		self.wd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+		self.wd = os.path.dirname(os.path.realpath(__file__))
 		#parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
 		parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
 		parser.add_argument('--dim',nargs=3,help='Dimensions of images',default=[96,96,96])

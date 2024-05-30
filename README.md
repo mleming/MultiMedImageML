@@ -29,7 +29,7 @@ Getting Started
 Datasets
 ========
 
-This may be used with either public benchmark datasets of brain images or internal hospital records, so long as they're represented as DICOM or NIFTI images. It was largely tested on [https://adni.loni.usc.edu/data-samples/access-data/](ADNI) and data internal to MGH. If they're represented as DICOM images, they are converted to NIFTI with metadata represented as a JSON file using [https://github.com/rordenlab/dcm2niix](dcm2niix). They may be further converted to NPY files, which are resized to a specific dimension, with the metadata represented in a pandas dataframe.
+This may be used with either public benchmark datasets of brain images or internal hospital records, so long as they're represented as DICOM or NIFTI images. It was largely tested on [ADNI](https://adni.loni.usc.edu/data-samples/access-data/) and data internal to MGH. If they're represented as DICOM images, they are converted to NIFTI with metadata represented as a JSON file using [dcm2niix](https://github.com/rordenlab/dcm2niix). They may be further converted to NPY files, which are resized to a specific dimension, with the metadata represented in a pandas dataframe.
 
 The MedImageLoader builds up this representation automatically, but it is space-intensive to do so.
 
@@ -73,7 +73,7 @@ Data may be represented with a folder structure.
 
 In the case of the above folder structure, "/path/to/control" may simply be input into the MedImageLoader function. For multiple labels, "/path/to/test", "/path/to/test2", and so on, may also be input.
 
-Confound representation
-=======================
+Labels and Confounds
+====================
 
-
+MIMIM enables for the representation of labels to classify by and confounds to regress. Confounds are represented as strings and labels can be represented as either strings or the input folder structure to MedImageLoader.

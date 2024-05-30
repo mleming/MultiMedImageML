@@ -19,14 +19,14 @@ from .DataBaseWrapper import DataBaseWrapper
 # Translates a filename to a key and back, for storing files as keys in the
 # pandas dataframe. By default, the keys are the full filepaths. This function
 # may need to be changed when switching to different systems
-def path_func_default(fkey,reverse=False):
+def key_to_filename_default(fkey,reverse=False):
 	return fkey
 
 class MedImageLoader():
 	def __init__(self,*image_folders,
 			pandas_cache = '../pandas/',
 			cache = True,
-			path_func = path_func_default,
+			key_to_filename = key_to_filename_default,
 			batch_by_pid=True,
 			file_record_name=None,
 			all_vars = None,
@@ -45,7 +45,8 @@ class MedImageLoader():
 			C_dim = (16,32),
 			return_obj = False,
 			channels_first = True,
-			recycle=True):
+			recycle=True,
+			gpu_ids = ""):
 		self.channels_first = channels_first
 		self.image_folders = image_folders
 		self.augment = augment
@@ -64,13 +65,13 @@ class MedImageLoader():
 		self.Y_dim = Y_dim
 		self.C_dim = C_dim
 		self.mode = None
+		self.gpu_ids = gpu_ids
 		
 		# If set to true, restacks images every time via the data 
 		# matching function. Best for very large and imbalanced datasets
 		self.recycle=recycle
 		
-		self.path_func = path_func
-		check_path_func(self.path_func)
+		check_key_to_filename(key_to_filename)
 
 		# Stores images so that they aren't repeated in different stacks
 		self.image_dict = {}
@@ -100,7 +101,7 @@ class MedImageLoader():
 					labels=self.label,
 					confounds=self.confounds,
 					dim=self.dim,
-					path_func=self.path_func)
+					key_to_filename=key_to_filename)
 		if not self.pickle_input():
 			self.build_pandas_database()
 		self.all_vars.build_metadata()
@@ -147,7 +148,7 @@ class MedImageLoader():
 		
 		for i,filename in enumerate(self.image_dict):
 			im = self.image_dict[filename]
-			if im.fkey not in self.all_vars.all_vars.index:
+			if not self.all_vars.has_im(im):
 				try:
 					im.get_image()
 					im.clear_image()
@@ -197,8 +198,8 @@ class MedImageLoader():
 				non_confound_value_ranges = self.val_ranges,verbose=False,
 				all_vars=self.all_vars.all_vars)
 			fname_list = list(fname_list)
+			fname_list = [self.all_vars.key_to_filename(_) for _ in fname_list]
 			if len(fname_list) == 0:
-				
 				print(self.all_vars.all_vars.loc[:,self.tl()])
 				raise Exception("No valid files from %s" % self.tl())
 			assert(isinstance(fname_list,list))
@@ -212,7 +213,6 @@ class MedImageLoader():
 				if filename in self.image_dict:
 					X_files[i][j] = self.image_dict[filename]
 				else:
-					
 					X_files[i][j] = ImageRecord(filename,
 								dim=self.dim,
 								y_nums=[i] if len(X_files) == 1 else None,
@@ -321,7 +321,8 @@ class MedImageLoader():
 				dtype = self.dtype,
 				sort=False,
 				batch_by_pid=False,
-				channels_first=self.channels_first)
+				channels_first=self.channels_first,
+				gpu_ids=self.gpu_ids)
 		if self.return_obj:
 			return p
 		elif self.return_labels():
