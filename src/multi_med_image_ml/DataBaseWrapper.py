@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
-from utils import *
+from .utils import *
 import dateutil
 
 class DataBaseWrapper():

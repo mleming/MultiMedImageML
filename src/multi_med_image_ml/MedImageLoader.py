@@ -13,8 +13,8 @@ import shutil
 import nibabel as nb
 from nibabel.filebasedimages import *
 
-from Records import BatchRecord,ImageRecord
-from DataBaseWrapper import DataBaseWrapper
+from .Records import BatchRecord,ImageRecord
+from .DataBaseWrapper import DataBaseWrapper
 
 # Translates a filename to a key and back, for storing files as keys in the
 # pandas dataframe. By default, the keys are the full filepaths. This function

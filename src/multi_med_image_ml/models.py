@@ -9,8 +9,8 @@ from datetime import datetime
 import hashlib
 import os,sys
 from copy import deepcopy as copy
-from Records import ImageRecord,BatchRecord
-from utils import download_weights
+from .Records import ImageRecord,BatchRecord
+from .utils import download_weights
 
 # Three functions that are used to get the age encoding functions
 def time_index(i,pos,d=512,c=10000):

@@ -1,7 +1,7 @@
 import torch,os
 from torch import nn
 import numpy as np
-from Records import BatchRecord
+from .Records import BatchRecord
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')

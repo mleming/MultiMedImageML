@@ -1,7 +1,7 @@
 import functools,os
 import numpy as np
 from monai.transforms import *
-from utils import *
+from .utils import *
 
 generate_transforms = Compose([
 		RandAffine(prob=0.5, translate_range=10), 
