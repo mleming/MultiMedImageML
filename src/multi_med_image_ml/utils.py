@@ -39,7 +39,7 @@ def path_func_default(filename,reverse=False):
 	return filename
 
 def check_path_func(path_func):
-	if path_func(path_func(os.path.realpath(__file__)),reverse=True) \
+	if path_func(path_func(os.path.realpath(__file__),reverse=False),reverse=True) \
 		!= os.path.realpath(__file__):
 		raise Exception("""
 			path_func must be a function that translates
