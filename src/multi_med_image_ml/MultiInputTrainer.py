@@ -60,7 +60,7 @@ class MultiInputTrainer():
 		if self.loss_image_dir is not None:
 			os.makedirs(self.loss_image_dir,exist_ok=True)
 			self.loss_image_file = os.path.join(self.loss_image_dir,
-											f"{self.name}_loss.jpg")
+											f"{self.name}_loss.png")
 			self.loss_vals_file  = os.path.join(self.loss_image_dir,
 											f"{self.name}_vals.npy")
 			self.pids_read = set()

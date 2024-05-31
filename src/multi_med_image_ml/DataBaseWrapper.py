@@ -16,12 +16,14 @@ class DataBaseWrapper():
 					confounds=[],
 					dim=None,
 					cdim=None,
-					key_to_filename = key_to_filename_default):
+					key_to_filename = key_to_filename_default,
+					val_ranges={}):
 		self.key_to_filename = key_to_filename
 		check_key_to_filename(self.key_to_filename)
 
 		self.filename = filename
 		self.dim = dim
+		self.val_ranges = val_ranges
 		self.labels = [] if labels is None else labels
 		self.confounds = [] if confounds is None else confounds
 		if all_vars is not None:
@@ -44,6 +46,20 @@ class DataBaseWrapper():
 	def has_im(self,im: ImageRecord):
 		fkey = self.key_to_filename(im.npy_file,reverse=True)
 		return fkey in self.all_vars.index
+	def in_val_ranges(self,fkey: str) -> bool:
+		valid = True
+		for column_name in self.val_ranges:
+			val = self.all_vars.loc[fkey,column_name]
+			if is_nan(val,inc_null_str=True):
+				return False
+			elif isinstance(val,str):
+				if val not in self.val_ranges[column_name]:
+					return False
+			elif isinstance(val,float) or isinstance(val,int):
+				min_,max_ = self.val_ranges[column_name]
+				if val < min_ or val > max_:
+					return False
+		return True
 	def build_metadata(self):
 		for l in self.labels:
 			if l not in self.all_vars.columns:
@@ -188,7 +204,7 @@ class DataBaseWrapper():
 		id = self._get_val(npy_file,["PatientID","Patient ID"])
 		return id
 	def parse_date(self,d,date_format="%Y-%m-%d %H:%M:%S"):
-		if is_nan(d):
+		if is_nan(d,inc_null_str=True):
 			return datetime.datetime(year=1970,month=1,day=1)
 		elif is_float(d):
 			return dateutil.parser.parse(str(d))
@@ -209,8 +225,8 @@ class DataBaseWrapper():
 	def loc_val(self,npy_file,c):
 		fkey = self.key_to_filename(npy_file,reverse=True)
 		try:
-			if fkey not in self.all_vars.index:
-				print("Error - %s not present in index. Adding..." % fkey)
+			#if fkey not in self.all_vars.index:
+			#	print("Error - %s not present in index. Adding..." % fkey)
 			#assert(fkey in self.all_vars.index)
 			
 			return self.all_vars.loc[fkey,c]
@@ -254,8 +270,9 @@ class DataBaseWrapper():
 			self.jdict.append(json_dict)
 			assert(len(self.jdict) > 0)
 	def get_file_list(self):
-		return [self.key_to_filename(str(_)) \
-			for _ in self.all_vars.index]
+		flist = list(filter(lambda k: self.in_val_ranges(k),
+				self.all_vars.index))
+		return [self.key_to_filename(str(_)) for _ in flist]
 	def out_dataframe(self,fkey_ass = None):
 		
 		if len(self.jdict) > 0:

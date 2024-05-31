@@ -28,6 +28,8 @@ def get_age_arr(age,max_age=120.0,d=512):
 	return arr
 
 def get_age_encoding(date,birthdate,d=512):
+	if date is None or birthdate is None:
+		return np.zeros((d,0))
 	age = date.year - birthdate.year
 	return get_age_arr(age,d=d)
 
@@ -402,14 +404,10 @@ class MultiInputModule(nn.Module):
 					"Number of static inputs not equal to input: %d != %d"\
 						 % (len(static_inputs),self.n_stat_inputs))
 				dates1 = x.get_exam_dates()
-				for d in dates1:
-					if d is None:
-						raise Exception("Dates cannot be none")
 				bdates = x.get_birth_dates()
-				for b in bdates:
-					if b is None:
-						raise Exception("Birth dates cannot be none")
-				bdate1 = bdates[0]
+				for i,b in enumerate(bdates):
+					if b is not None:
+						bdate1 = b
 				x = x.get_image()
 				assert(torch.is_tensor(x))
 				

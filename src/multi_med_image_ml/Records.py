@@ -176,6 +176,8 @@ class ImageRecord():
 		elif self.get_image_type() == "dicom":
 			self.image = dicom.dcmread(self.filename).pixel_array
 		else:
+			print("Error in %s" % self.filename)
+			print("Error in %s" % self.npy_file)
 			raise Exception("Unsupported image type: %s"%self.get_image_type())
 		self.image = resize_np(self.image,self.dim)
 		if self.cache and not os.path.isfile(self.cached_record):

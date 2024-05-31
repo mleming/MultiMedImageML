@@ -101,7 +101,8 @@ class MedImageLoader():
 					labels=self.label,
 					confounds=self.confounds,
 					dim=self.dim,
-					key_to_filename=key_to_filename)
+					key_to_filename=key_to_filename,
+					val_ranges=self.val_ranges)
 		if not self.pickle_input():
 			self.build_pandas_database()
 		self.all_vars.build_metadata()
@@ -304,7 +305,7 @@ class MedImageLoader():
 					temp.append(im)
 					self.index += 1
 					break
-				except ImageFileError:
+				except (ImageFileError, ValueError) as e:
 					self.file_list_dict[self.tl()][b] = \
 						self.file_list_dict[self.tl()][b][1:]
 					continue

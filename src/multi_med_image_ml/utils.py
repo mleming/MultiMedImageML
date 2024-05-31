@@ -338,8 +338,6 @@ def resize_np(nifti_data,dim):
 			nifti_data = np.squeeze(np.mean(nifti_data,axis=-1))
 		assert(len(nifti_data.shape) == len(dim))
 	if nifti_data.shape != tuple(dim):
-		print(nifti_data.shape)
-		print(dim)
 		zp = [dim[i]/nifti_data.shape[i] for i in range(len(dim))]
 		nifti_data = ndimage.zoom(nifti_data,zp)
 	return nifti_data
