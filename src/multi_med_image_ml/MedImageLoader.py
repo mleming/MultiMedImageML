@@ -9,7 +9,7 @@ import pandas as pd
 import torch.multiprocessing
 from .utils import *
 torch.multiprocessing.set_sharing_strategy('file_system')
-import shutil
+import psutil,shutil
 import nibabel as nb
 from nibabel.filebasedimages import *
 
@@ -113,6 +113,7 @@ class MedImageLoader():
 		else:
 			self.mode = "iterate"
 		
+		self.mem_limit = psutil.virtual_memory().available * 0.2
 		
 		# For outputting the records of files that were read in
 		self.file_record_name = file_record_name 
@@ -226,7 +227,7 @@ class MedImageLoader():
 					self.image_dict[filename] = X_files[i][j]
 		return X_files
 	def load_image_stack(self):
-		if self.get_mem() > 10000000000:
+		if self.get_mem() > self.mem_limit:
 			print("Clearing memory")
 			self.clear_mem()
 		#self.rotate_labels()
@@ -340,8 +341,23 @@ class MedImageLoader():
 	def __iter__(self):
 		return self
 	def clear_mem(self):
+		cur_mem = self.get_mem()
+		times_called = []
+		ssize = 0
 		for filename in self.image_dict:
-			self.image_dict[filename].clear_image()
+			if self.image_dict[filename].image is not None:
+				times_called.append(self.image_dict[filename].times_called)
+				if ssize == 0: ssize = self.image_dict[filename].get_mem()
+		times_called = sorted(times_called,reverse=True)
+		n = int(self.mem_limit / ssize * 0.5)
+		if n > len(times_called):
+			warnings.warn("Something strange")
+			n = int(len(times_called)/2)
+		median_times_called = times_called[n]
+		for filename in self.image_dict:
+			if self.image_dict[filename].image is not None:
+				if self.image_dict[filename].times_called < median_times_called:
+					self.image_dict[filename].clear_image()
 	def get_mem(self):
 		total_mem = 0
 		for filename in self.image_dict:

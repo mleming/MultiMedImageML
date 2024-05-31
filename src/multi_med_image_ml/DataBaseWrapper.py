@@ -20,7 +20,6 @@ class DataBaseWrapper():
 					val_ranges={}):
 		self.key_to_filename = key_to_filename
 		check_key_to_filename(self.key_to_filename)
-
 		self.filename = filename
 		self.dim = dim
 		self.val_ranges = val_ranges

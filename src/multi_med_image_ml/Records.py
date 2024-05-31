@@ -61,6 +61,7 @@ class ImageRecord():
 			if self.npy_file in self.all_vars.all_vars:
 				self.load_extra_info()
 		
+		self.times_called = 0
 		self.cache = cache
 		self.cached_record = None
 	def get_exam_date(self):
@@ -149,7 +150,7 @@ class ImageRecord():
 		#	return np.prod(self.image.shape) * \
 		#		np.dtype(self.image.dtype).itemsize
 		elif self.dtype == "torch":
-			return self.image.element_size()
+			return self.image.element_size() * self.image.nelement()
 		elif self.dtype == "numpy":
 			return np.prod(self.image.shape) * \
 				np.dtype(self.image.dtype).itemsize
@@ -190,6 +191,7 @@ class ImageRecord():
 		if self.image is None:
 			self.read_image()
 		self.load_extra_info()
+		self.times_called += 1
 		if augment and self.dtype == "torch":
 			return generate_transforms(self.image)
 		else: return self.image
