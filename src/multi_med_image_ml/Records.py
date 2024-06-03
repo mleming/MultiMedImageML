@@ -371,11 +371,14 @@ class BatchRecord():
 
 # Used for memory management purposes
 class AllRecords():
-	def __init__(self):
+	def __init__(self,dim):
 		self.image_dict = {}
 		self.mem_limit = psutil.virtual_memory().available * 0.2
 		self.cur_mem = 0
-		self.obj_size = None
+		temp = torch.zeros(dim).float()
+		self.obj_size = temp.element_size() * temp.nelement()
+		del temp
+		gc.collect()
 	def add(self,filename: str, im: ImageRecord):
 		self.image_dict[filename] = im
 		if self.obj_size is None and im.image is not None:

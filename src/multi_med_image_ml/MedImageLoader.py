@@ -73,7 +73,7 @@ class MedImageLoader():
 		check_key_to_filename(key_to_filename)
 
 		# Stores images so that they aren't repeated in different stacks
-		self.all_records = AllRecords()
+		self.all_records = AllRecords(self.dim)
 		# If true, this uses one match confound at a time and cycles through
 		# them
 		self.zero_data_list = []
