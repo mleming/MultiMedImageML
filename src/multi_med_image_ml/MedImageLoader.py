@@ -289,7 +289,7 @@ class MedImageLoader():
 			raise StopIteration
 		# Temporary measure
 		if self.index % 1000 == 0 and self.index != 0:
-			self.clear_mem()
+			self.all_records.check_mem()
 		temp = []
 		for i in range(self.batch_size):
 			b = i % len(self.file_list_dict[self.tl()])
