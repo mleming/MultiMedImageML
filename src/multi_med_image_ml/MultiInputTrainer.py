@@ -29,16 +29,6 @@ class MultiInputTrainer():
 		self.model = model
 		self.name = name
 
-		# Load saved or pretrained models
-		self.checkpoint_dir = checkpoint_dir
-		if self.checkpoint_dir is not None:
-			os.makedirs(self.checkpoint_dir,exist_ok=True)
-			self.model_file = os.path.join(
-				self.checkpoint_dir,
-				'%s.pt' % self.name)
-			if os.path.isfile(self.model_file):
-				model.load_state_dict(torch.load(self.model_file))
-		
 		self.optimizer = torch.optim.Adam(
 			self.model.classifier_parameters(),
 			betas = betas,
@@ -49,6 +39,24 @@ class MultiInputTrainer():
 			betas = betas,
 			lr = lr
 		)
+
+		# Load saved or pretrained models
+		self.checkpoint_dir = checkpoint_dir
+		if self.checkpoint_dir is not None:
+			os.makedirs(self.checkpoint_dir,exist_ok=True)
+			self.model_file = os.path.join(
+				self.checkpoint_dir,
+				'%s.pt' % self.name)
+			if os.path.isfile(self.model_file):
+				state_dicts = torch.load(self.model_file)
+				self.model.load_state_dict(state_dicts['model_state_dict'])
+				self.model.regressor_freeze()
+				self.optimizer.load_state_dict(
+					state_dicts['optimizer_state_dict']
+				)
+				self.optimizer_reg.load_state_dict(
+					state_dicts['optimizer_reg_state_dict']
+				)
 		self.loss_function = loss_function
 		self.batch_size = batch_size
 		self.regress = regress
@@ -154,8 +162,11 @@ class MultiInputTrainer():
 			self.one_step = not self.one_step
 		if self.index % self.save_latest_freq == 0 and self.index != 0:
 			if self.checkpoint_dir is not None:
-				torch.save(
-					self.model.state_dict(),
+				torch.save({
+					'model_state_dict' : self.model.state_dict(),
+					'optimizer_state_dict' : self.optimizer.state_dict(),
+					'optimizer_reg_state_dict' : self.optimizer_reg.state_dict()
+					},
 					self.model_file
 				)
 			if self.loss_image_dir is not None:

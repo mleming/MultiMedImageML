@@ -12,7 +12,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 import psutil,shutil
 import nibabel as nb
 from nibabel.filebasedimages import *
-
+import gc
 from .Records import BatchRecord,ImageRecord
 from .DataBaseWrapper import DataBaseWrapper
 
@@ -46,7 +46,8 @@ class MedImageLoader():
 			return_obj = False,
 			channels_first = True,
 			recycle=True,
-			gpu_ids = ""):
+			gpu_ids = "",
+			save_ram = True):
 		self.channels_first = channels_first
 		self.image_folders = image_folders
 		self.augment = augment
@@ -139,6 +140,7 @@ class MedImageLoader():
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
 		self.index = 0
+		self.save_ram = save_ram
 		self.load_image_stack()
 	# Builds up the entire cache in one go — may take a while
 	def build_pandas_database(self):
@@ -228,7 +230,6 @@ class MedImageLoader():
 		return X_files
 	def load_image_stack(self):
 		if self.get_mem() > self.mem_limit:
-			print("Clearing memory")
 			self.clear_mem()
 		#self.rotate_labels()
 		if self.tl() not in self.file_list_dict:
@@ -291,6 +292,9 @@ class MedImageLoader():
 			self.rotate_labels()
 			self.load_image_stack()
 			raise StopIteration
+		# Temporary measure
+		if self.index % 1000 == 0 and self.index != 0:
+			self.clear_mem()
 		temp = []
 		for i in range(self.batch_size):
 			b = i % len(self.file_list_dict[self.tl()])
@@ -347,17 +351,22 @@ class MedImageLoader():
 		for filename in self.image_dict:
 			if self.image_dict[filename].image is not None:
 				times_called.append(self.image_dict[filename].times_called)
-				if ssize == 0: ssize = self.image_dict[filename].get_mem()
+				#if ssize == 0: ssize = self.image_dict[filename].get_mem()
 		times_called = sorted(times_called,reverse=True)
-		n = int(self.mem_limit / ssize * 0.5)
-		if n > len(times_called):
-			warnings.warn("Something strange")
-			n = int(len(times_called)/2)
-		median_times_called = times_called[n]
+		#n = int(self.mem_limit / ssize * 0.5)
+		#if n > len(times_called):
+		#	warnings.warn("Something strange")
+		#	n = int(len(times_called)/2)
+		n = 10
+		median_times_called = 1000000000 if len(times_called) < n else times_called[n]
 		for filename in self.image_dict:
 			if self.image_dict[filename].image is not None:
-				if self.image_dict[filename].times_called < median_times_called:
+				if self.save_ram or self.image_dict[filename].times_called < median_times_called:
 					self.image_dict[filename].clear_image()
+		if self.save_ram:
+			del self.image_dict
+			self.image_dict = {}
+			gc.collect()
 	def get_mem(self):
 		total_mem = 0
 		for filename in self.image_dict:

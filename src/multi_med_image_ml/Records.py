@@ -275,16 +275,16 @@ class BatchRecord():
 		#)
 		self.device=device
 		self.dtype=dtype
-	def process_to_cuda(self,device):
-		self.Y = torch.tensor(self.Y).float().cuda(device)
-		self.Y = torch.unsqueeze(self.Y,1)
-		self.Y = self.Y[-1,...]
-		
-		self.X = torch.tensor(self.X)
-		self.X = torch.unsqueeze(self.X,1).float().cuda(device)
-		
-		self.C = torch.tensor(self.C).float().cuda(device)
-		self.C_dud = torch.tensor(self.C_dud).float().cuda(device)
+	#def process_to_cuda(self,device):
+	#	self.Y = torch.tensor(self.Y).float().cuda(device)
+	#	self.Y = torch.unsqueeze(self.Y,1)
+	#	self.Y = self.Y[-1,...]
+	#	
+	#	self.X = torch.tensor(self.X)
+	#	self.X = torch.unsqueeze(self.X,1).float().cuda(device)
+	#	
+	#	self.C = torch.tensor(self.C).float().cuda(device)
+	#	self.C_dud = torch.tensor(self.C_dud).float().cuda(device)
 	
 	def name(self):
 		return 'BatchRecord'
