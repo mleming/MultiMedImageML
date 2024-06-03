@@ -199,6 +199,15 @@ class Regressor(nn.Module):
 	def cpu(self):
 		for r in self.regressor_set:
 			r.cpu()
+	def state_dict(self,*args,**kwargs):
+		state_dict1 = {}
+		for i,r in enumerate(self.regressor_set):
+			state_dict1["regressor.%d" % i] = r.state_dict()
+		return state_dict1
+	def load_state_dict(self,state_dict,*args,**kwargs):
+		for i,r in enumerate(self.regressor_set):
+			r.load_state_dict(state_dict["regressor.%d" % i])
+		return
 	def forward(self,x):
 		return torch.cat([r(x) for r in self.regressor_set],2)
 		
@@ -337,7 +346,16 @@ class MultiInputModule(nn.Module):
 				self.load_state_dict(torch.load(weights))
 			else:
 				self.load_state_dict(torch.load(download_weights(weights)))
-
+	def load_state_dict(self,state_dict,*args, **kwargs):
+		if self.regressor is not None:
+			self.regressor.load_state_dict(state_dict['regressor'])
+		super().load_state_dict(state_dict,*args,**kwargs)
+		return
+	def state_dict(self,*args,**kwargs):
+		state_dict1 = super().state_dict(*args, **kwargs)
+		if self.regressor is not None:
+			state_dict1.update({'regressor':self.regressor.state_dict})
+		return state_dict1
 	def forward_ensemble(self,kwargs,n_ens=10):
 		x = []
 		for i in range(n_ens):
@@ -408,7 +426,7 @@ class MultiInputModule(nn.Module):
 				for i,b in enumerate(bdates):
 					if b is not None:
 						bdate1 = b
-				x = x.get_image()
+				x = x.get_image(augment=self.training)
 				assert(torch.is_tensor(x))
 				
 			if (self.encode_age and (dates is None or bdate is None)):

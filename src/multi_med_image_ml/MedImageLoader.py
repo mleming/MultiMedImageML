@@ -328,9 +328,9 @@ class MedImageLoader():
 		if self.return_obj:
 			return p
 		elif self.return_labels():
-			return p.get_image(),p.get_Y()
+			return p.get_image(augment=self.augment),p.get_Y()
 		else:
-			return p.get_image()				
+			return p.get_image(augment=self.augment)				
 
 	def __len__(self):
 		l = len(self.file_list_dict[self.tl()])
