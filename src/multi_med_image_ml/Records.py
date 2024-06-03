@@ -291,8 +291,8 @@ class BatchRecord():
 	def _get(self,callback,augment=False):
 		Xs = []
 		no_arr = False
-		for im in (self.image_records if (callback != "Y" and not self.batch_by_pid)\
-			else [self.image_records[-1]]):
+		for im in ([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
+			else self.image_records):
 			if callback == "X":
 				X = im.get_image(augment=augment)
 				if self.dtype == "torch":

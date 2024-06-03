@@ -215,7 +215,7 @@ class TestSimple(unittest.TestCase):
 			dim=(48,32,24),dtype="numpy",
 			label=["MRAcquisitionType"],
 			confounds=["PercentSampling"],
-			channels_first=False)
+			channels_first=False,batch_by_pid=False)
 		self.assertEqual(medim_loader.mode,"match")
 		for image,label in medim_loader:
 			imsize = image.shape
@@ -241,7 +241,7 @@ class TestSimple(unittest.TestCase):
 			dim=(48,32,24),dtype="torch",
 			label=["MRAcquisitionType"],
 			confounds=["PercentSampling"],
-			group_by = "Patient ID",return_obj=True,
+			return_obj=True,
 			channels_first=False)
 		for patient in medim_loader:
 			image = patient.get_image()
@@ -265,7 +265,6 @@ class TestSimple(unittest.TestCase):
 		#	cache=True)
 		#for image,label in medim_loader: continue
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
-			group_by="Patient ID",
 			return_obj=True,
 			cache=True,dtype="torch",
 			Y_dim = (32,32),C_dim=(32,32))

@@ -37,7 +37,6 @@ class MedImageLoader():
 			confounds = [],
 			match_confounds = [],
 			label = [],
-			group_by = None,
 			augment = True,
 			val_ranges = {},
 			dtype="torch",
@@ -57,17 +56,17 @@ class MedImageLoader():
 		self.pandas_cache = pandas_cache
 		self.val_ranges = val_ranges
 		self.get_encoded = get_encoded
-		self.batch_by_pid = group_by is not None
+		self.batch_by_pid = batch_by_pid
 		self.file_list_dict = {}
 		self.static_inputs = static_inputs
 		self.label = label
 		self.confounds = confounds
-		self.group_by = group_by
 		self.Y_dim = Y_dim
 		self.C_dim = C_dim
 		self.mode = None
 		self.gpu_ids = gpu_ids
-		
+		self.save_ram = save_ram
+
 		# If set to true, restacks images every time via the data 
 		# matching function. Best for very large and imbalanced datasets
 		self.recycle=recycle
@@ -140,7 +139,6 @@ class MedImageLoader():
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
 		self.index = 0
-		self.save_ram = save_ram
 		self.load_image_stack()
 	# Builds up the entire cache in one go — may take a while
 	def build_pandas_database(self):

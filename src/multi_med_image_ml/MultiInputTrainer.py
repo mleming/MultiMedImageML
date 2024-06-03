@@ -108,7 +108,8 @@ class MultiInputTrainer():
 				dates=pr.get_exam_dates(),
 				bdate=pr.get_birth_dates()[0])
 		if self.one_step:
-			self.loss_Y = self.loss_function(y_pred,pr.get_Y())
+			Y = pr.get_Y()
+			self.loss_Y = self.loss_function(y_pred,Y)
 			self.loss_C_dud = self.loss_function(y_reg,pr.get_C_dud())
 			self.loss_classifier = self.loss_Y + (self.loss_C_dud)
 			if self.model.variational:
