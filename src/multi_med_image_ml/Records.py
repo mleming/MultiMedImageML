@@ -2,6 +2,8 @@ import functools,os
 import numpy as np
 from monai.transforms import *
 from .utils import *
+import gc
+import psutil
 
 generate_transforms = Compose([
 		RandAffine(prob=0.5, translate_range=10), 
@@ -157,11 +159,12 @@ class ImageRecord():
 		#else:
 		#	raise Exception("Unimplemented dtype: %s" % self.dtype)
 	def clear_image(self):
+		del self.image
+		del self.C
+		del self.Y
 		self.image = None
-		self.X = None
 		self.Y = None
 		self.C = None
-		#self.loaded = False
 	def read_image(self):
 		if self.get_image_type() == "dicom_folder":
 			self.filename,self.json_file = compile_dicom(self.filename,
@@ -366,3 +369,32 @@ class BatchRecord():
 	def get_static_inputs(self):
 		return self._get("static_inputs")
 
+# Used for memory management purposes
+class AllRecords():
+	def __init__(self):
+		self.image_dict = {}
+		self.mem_limit = psutil.virtual_memory().available * 0.2
+		self.cur_mem = 0
+		self.obj_size = None
+	def add(self,filename: str, im: ImageRecord):
+		self.image_dict[filename] = im
+		if self.obj_size is None and im.image is not None:
+			self.obj_size = im.get_mem()
+	def has(self,filename: str):
+		return filename in self.image_dict
+	def get(self,filename: str):
+		return self.image_dict[filename]
+	def clear_images(self):
+		for filename in self.image_dict:
+			self.image_dict[filename].clear_image()
+		gc.collect()
+	def get_mem(self):
+		if self.obj_size is None: return 0
+		n_images = 0
+		for filename in self.image_dict:
+			if self.image_dict[filename] is not None:
+				n_images += 1
+		return n_images * self.obj_size
+	def check_mem(self):
+		if self.get_mem() < self.mem_limit:
+			self.clear_images()

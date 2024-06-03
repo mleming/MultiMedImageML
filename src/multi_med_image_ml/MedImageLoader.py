@@ -12,8 +12,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 import psutil,shutil
 import nibabel as nb
 from nibabel.filebasedimages import *
-import gc
-from .Records import BatchRecord,ImageRecord
+from .Records import BatchRecord,ImageRecord,AllRecords
 from .DataBaseWrapper import DataBaseWrapper
 
 # Translates a filename to a key and back, for storing files as keys in the
@@ -74,7 +73,7 @@ class MedImageLoader():
 		check_key_to_filename(key_to_filename)
 
 		# Stores images so that they aren't repeated in different stacks
-		self.image_dict = {}
+		self.all_records = AllRecords()
 		# If true, this uses one match confound at a time and cycles through
 		# them
 		self.zero_data_list = []
@@ -113,8 +112,6 @@ class MedImageLoader():
 		else:
 			self.mode = "iterate"
 		
-		self.mem_limit = psutil.virtual_memory().available * 0.2
-		
 		# For outputting the records of files that were read in
 		self.file_record_name = file_record_name 
 		if self.file_record_name is not None:
@@ -148,8 +145,8 @@ class MedImageLoader():
 		self.mode = "iterate"
 		self._load_list_stack()
 		
-		for i,filename in enumerate(self.image_dict):
-			im = self.image_dict[filename]
+		for i,filename in enumerate(self.all_records.image_dict):
+			im = self.all_records.get(filename)
 			if not self.all_vars.has_im(im):
 				try:
 					im.get_image()
@@ -158,7 +155,7 @@ class MedImageLoader():
 					continue
 			if i % 100 == 0:
 				self.all_vars.out_dataframe()
-		self.clear_mem()
+		self.all_records.clear_images()
 		self.all_vars.out_dataframe()
 		self.mode = old_mode
 	def pickle_input(self):
@@ -212,8 +209,8 @@ class MedImageLoader():
 		X_files = self.get_file_list() 
 		for i,filename_list in enumerate(X_files):
 			for j,filename in enumerate(filename_list):
-				if filename in self.image_dict:
-					X_files[i][j] = self.image_dict[filename]
+				if self.all_records.has(filename):
+					X_files[i][j] = self.all_records.get(filename)
 				else:
 					X_files[i][j] = ImageRecord(filename,
 								dim=self.dim,
@@ -224,12 +221,10 @@ class MedImageLoader():
 								all_vars = self.all_vars,
 								cache=self.cache,
 								static_inputs = self.static_inputs)
-					self.image_dict[filename] = X_files[i][j]
+					self.all_records.add(filename, X_files[i][j])
 		return X_files
 	def load_image_stack(self):
-		if self.get_mem() > self.mem_limit:
-			self.clear_mem()
-		#self.rotate_labels()
+		self.all_records.check_mem()
 		if self.tl() not in self.file_list_dict:
 			self.file_list_dict[self.tl()] = []
 		X_files = self._load_list_stack()
@@ -345,33 +340,5 @@ class MedImageLoader():
 			return l * max([len(_) for _ in self.file_list_dict[self.tl()]])
 	def __iter__(self):
 		return self
-	def clear_mem(self):
-		cur_mem = self.get_mem()
-		times_called = []
-		ssize = 0
-		for filename in self.image_dict:
-			if self.image_dict[filename].image is not None:
-				times_called.append(self.image_dict[filename].times_called)
-				#if ssize == 0: ssize = self.image_dict[filename].get_mem()
-		times_called = sorted(times_called,reverse=True)
-		#n = int(self.mem_limit / ssize * 0.5)
-		#if n > len(times_called):
-		#	warnings.warn("Something strange")
-		#	n = int(len(times_called)/2)
-		n = 10
-		median_times_called = 1000000000 if len(times_called) < n else times_called[n]
-		for filename in self.image_dict:
-			if self.image_dict[filename].image is not None:
-				if self.save_ram or self.image_dict[filename].times_called < median_times_called:
-					self.image_dict[filename].clear_image()
-		if self.save_ram:
-			del self.image_dict
-			self.image_dict = {}
-			gc.collect()
-	def get_mem(self):
-		total_mem = 0
-		for filename in self.image_dict:
-			total_mem += float(self.image_dict[filename].get_mem())
-		return total_mem
 	def name(self):
 		return 'MedImageLoader'
