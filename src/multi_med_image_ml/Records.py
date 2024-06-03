@@ -254,7 +254,8 @@ class BatchRecord():
 			sort=True,
 			batch_by_pid=False,
 			channels_first = True,
-			gpu_ids=""):
+			gpu_ids="",
+			batch_size = 14):
 		self.image_records = image_records
 		assert(
 			np.all(
@@ -275,6 +276,7 @@ class BatchRecord():
 		#)
 		self.device=device
 		self.dtype=dtype
+		self.batch_size = batch_size
 	#def process_to_cuda(self,device):
 	#	self.Y = torch.tensor(self.Y).float().cuda(device)
 	#	self.Y = torch.unsqueeze(self.Y,1)
@@ -291,8 +293,10 @@ class BatchRecord():
 	def _get(self,callback,augment=False):
 		Xs = []
 		no_arr = False
-		for im in ([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
+		
+		for i,im in enumerate([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
 			else self.image_records):
+			if i >= self.batch_size: break
 			if callback == "X":
 				X = im.get_image(augment=augment)
 				if self.dtype == "torch":

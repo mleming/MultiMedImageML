@@ -250,7 +250,8 @@ class MedImageLoader():
 							sort=True,
 							dtype=self.dtype,
 							channels_first=self.channels_first,
-							gpu_ids = self.gpu_ids))
+							gpu_ids = self.gpu_ids,
+							batch_size=self.batch_size))
 			X_files = [image_record_list]
 		self.file_list_dict[self.tl()] = X_files
 	def return_labels(self):
@@ -327,7 +328,8 @@ class MedImageLoader():
 				sort=False,
 				batch_by_pid=False,
 				channels_first=self.channels_first,
-				gpu_ids=self.gpu_ids)
+				gpu_ids=self.gpu_ids,
+				batch_size=self.batch_size)
 		if self.return_obj:
 			return p
 		elif self.return_labels():
