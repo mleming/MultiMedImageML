@@ -183,7 +183,7 @@ class MultiInputTrainer():
 						label="KL Loss")
 				plt.plot(list(range(len(self.xs))),
 					self.ys_c_dud,label="Classifier loss - adversarial")
-				plt.legend()
+				plt.legend(loc='upper right')
 				plt.savefig(self.loss_image_file)
 				plt.clf()
 				

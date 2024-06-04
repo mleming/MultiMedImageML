@@ -354,7 +354,7 @@ class MultiInputModule(nn.Module):
 	def state_dict(self,*args,**kwargs):
 		state_dict1 = super().state_dict(*args, **kwargs)
 		if self.regressor is not None:
-			state_dict1.update({'regressor':self.regressor.state_dict})
+			state_dict1.update({'regressor':self.regressor.state_dict()})
 		return state_dict1
 	def forward_ensemble(self,kwargs,n_ens=10):
 		x = []

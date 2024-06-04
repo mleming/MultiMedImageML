@@ -399,5 +399,5 @@ class AllRecords():
 				n_images += 1
 		return n_images * self.obj_size
 	def check_mem(self):
-		if self.get_mem() < self.mem_limit:
+		if True or self.get_mem() < self.mem_limit:
 			self.clear_images()
