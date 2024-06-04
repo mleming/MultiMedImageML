@@ -9,16 +9,45 @@ generate_transforms = Compose([
 		RandAffine(prob=0.5, translate_range=10), 
 		RandRotate(prob=0.5, range_x=10.0),
 		RandGaussianNoise(prob=0.5),
-		RandBiasField(prob=0.5)])
+		RandBiasField(prob=0.5)]
+)
 #,
 #		RandSmoothDeform(spatial_size=(96,96,96),rand_size=(96,96,96))
 #])
 
 @functools.total_ordering
-class ImageRecord():
+class ImageRecord:
+	"""
+	A class used to represent an abstraction of an image for MedImageLoader.
+	
+	ImageRecord is used to keep and organize a given image in main memory.
+	The same image may be represented on the file system as a nifti, dicom,
+	or an npy file, which caches the file at a particular size. This reads
+	in the file without creating duplicates. The image may also be cleared
+	or read in in real time to avoid having the images take up too much 
+	space in main memory.
+	
+	Attributes
+	----------
+	
+	filename : str
+		Filename of the image
+	database : DataBaseWrapper
+		Object used to quickly look up metadata associated with the image
+		(default None)
+	dim : tuple
+		Standard dimension that the image will be resized to upon returning it
+		(default (96,96,96))
+	dtype : str
+	
+	Methods
+	-------
+	
+	"""
+	
 	def __init__(self,
 		filename,
-		all_vars = None,
+		database = None,
 		dim=(96,96,96),
 		dtype="torch",
 		ID = None,
@@ -36,7 +65,7 @@ class ImageRecord():
 		self.npy_file = get_dim_str(self.filename,self.dim)
 		self.image_type = None
 		self.dtype = dtype
-		self.all_vars = all_vars
+		self.database = database
 		self.Y_dim = Y_dim
 		self.C_dim = C_dim
 		self.y_on_c = y_on_c # Adds the Y value to the C array as well
@@ -59,8 +88,8 @@ class ImageRecord():
 		self.static_input_res = None
 		
 		self.loaded = False
-		if self.all_vars is not None:
-			if self.npy_file in self.all_vars.all_vars:
+		if self.database is not None:
+			if self.npy_file in self.database.database:
 				self.load_extra_info()
 		
 		self.times_called = 0
@@ -76,20 +105,20 @@ class ImageRecord():
 		return self.bdate
 	def load_extra_info(self):
 		if self.loaded: return
-		if self.all_vars is None:
+		if self.database is None:
 			return
-		if not self.all_vars.has_im(self):
+		if not self.database.has_im(self):
 			return
-		self.bdate = self.all_vars.get_birth_date(self.npy_file)
-		self.exam_date = self.all_vars.get_exam_date(self.npy_file)
-		self.group_by = self.all_vars.get_ID(self.npy_file)
+		self.bdate = self.database.get_birth_date(self.npy_file)
+		self.exam_date = self.database.get_exam_date(self.npy_file)
+		self.group_by = self.database.get_ID(self.npy_file)
 		self.loaded = True
 	def get_static_inputs(self):
 		if self.static_input_res is None:
 			self.static_input_res = []
 			for key in self.static_inputs:
 				static_inputs.append(
-					self.all_vars.loc_val(self.npy_file,key)
+					self.database.loc_val(self.npy_file,key)
 				)
 		return self.static_input_res
 	def _is_valid_operand(self, other):
@@ -168,7 +197,7 @@ class ImageRecord():
 	def read_image(self):
 		if self.get_image_type() == "dicom_folder":
 			self.filename,self.json_file = compile_dicom(self.filename,
-				db_builder=self.all_vars)
+				db_builder=self.database)
 			self.image_type = None
 		self.cached_record = get_dim_str(self.filename,self.dim)
 		if self.cache and os.path.isfile(self.cached_record):
@@ -186,8 +215,8 @@ class ImageRecord():
 		self.image = resize_np(self.image,self.dim)
 		if self.cache and not os.path.isfile(self.cached_record):
 			np.save(self.cached_record,self.image)
-		if self.all_vars is not None:
-			self.all_vars.add_json(nifti_file=self.filename)
+		if self.database is not None:
+			self.database.add_json(nifti_file=self.filename)
 		if self.dtype == "torch":
 			self.image = torch.tensor(self.image)
 	def get_image(self,augment=False):
@@ -202,13 +231,13 @@ class ImageRecord():
 		"""Returns label"""
 		if self.y_nums is not None:
 			return self.y_nums
-		self.y_nums = self.all_vars.get_label_encode(self.npy_file)
+		self.y_nums = self.database.get_label_encode(self.npy_file)
 		return self.y_nums
 	def _get_C(self):
 		"""Returns confound array"""
 		if self.c_nums is not None:
 			return self.c_nums
-		self.c_nums = self.all_vars.get_confound_encode(self.npy_file)
+		self.c_nums = self.database.get_confound_encode(self.npy_file)
 		return self.c_nums
 	def get_Y(self):
 		if self.Y is not None:
@@ -234,19 +263,19 @@ class ImageRecord():
 		if self.y_on_c:
 			y_nums = self._get_Y()
 			for i,j in enumerate(y_nums):
-				self.C[i+len(self.all_vars.confounds),j] = 1
+				self.C[i+len(self.database.confounds),j] = 1
 		return self.C
 	def get_C_dud(self):
 		if self.dtype == "numpy":
 			C_dud = np.zeros(self.C_dim)
-			C_dud[0,:len(self.all_vars.confounds)] = 1
+			C_dud[0,:len(self.database.confounds)] = 1
 		elif self.dtype == "torch":
 			C_dud = torch.zeros(self.C_dim)
-			C_dud[0,:len(self.all_vars.confounds)] = 1
+			C_dud[0,:len(self.database.confounds)] = 1
 		if self.y_on_c:
 			y_nums = self._get_Y()
 			for i,j in enumerate(y_nums):
-				C_dud[i+len(self.all_vars.confounds),j] = 1
+				C_dud[i+len(self.database.confounds),j] = 1
 		return C_dud
 		
 class BatchRecord():

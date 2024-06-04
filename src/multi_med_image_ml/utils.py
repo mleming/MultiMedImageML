@@ -1,20 +1,21 @@
-import os,sys,json,argparse,glob,shutil,warnings,re,torch,random
+import os,sys,json,argparse,glob,shutil,warnings,re,torch,random,requests,gdown
+import datetime,datefinder,platform,dicom2nifti
 import numpy as np
 import pandas as pd
 from copy import deepcopy as copy
 import nibabel as nb
 from sklearn.preprocessing import MultiLabelBinarizer
+import pydicom as dicom
 from scipy import ndimage,stats
 from scipy.stats import mannwhitneyu 
 from sklearn.metrics import roc_curve, auc
 from dateutil import relativedelta,parser
-import datetime,datefinder
-import pydicom as dicom
-import dicom2nifti
 import dicom2nifti.settings as settings
 settings.disable_validate_slice_increment()
 from platformdirs import user_cache_dir
 import urllib.request
+from typing import Callable
+platform_system = platform.system()
 
 # Used to get a training set with equal distributions of input covariates
 # Can also be used to only have certain ranges of continuous covariates,
@@ -28,30 +29,45 @@ if shutil.which('dcm2niix') is None:
 else:
 	dcm2niix_installed = True
 
-def compile_dicom_py(dicom_folder):
+def compile_dicom_py(dicom_folder: str):
 	dicom2nifti.convert_directory(dicom_folder,"conv.nii.gz")
 	dicom_files = (glob.glob(os.path.join("*.dcm")))
 
-import platform
-platform_system = platform.system()
-
-def key_to_filename_default(filename,reverse=False):
+def key_to_filename_default(filename: str,reverse: bool =False) -> str:
+	"""Default function for converting a pandas key to a filename
+	
+	This function can be replaced by a more elaborate one that is able to
+	convert the location of a .npy file on a filesystem to a lookup key
+	in a pandas dataframe. By default, the file path is the key.
+	"""
+	
 	return filename
 
-def check_key_to_filename(key_to_filename):
-	if key_to_filename(key_to_filename(os.path.realpath(__file__),reverse=False),reverse=True) \
-		!= os.path.realpath(__file__):
+def check_key_to_filename(key_to_filename: Callable[[str,bool], str]):
+	"""Verifies that the key to file name conversion method is working properly
+	
+	This method is called to verify that a user-defined key-to-filename function
+	is properly implemented, such that the function is able to convert an input
+	path to a key forwards and backwards.
+	"""
+	
+	if key_to_filename(
+			key_to_filename(os.path.realpath(__file__),reverse=False),
+		reverse=True) != os.path.realpath(__file__):
 		raise Exception("""
 			key_to_filename must be a function that translates
 			a filename to an index key and back with the
 			'reverse' option input""")
 
-"""
-Uses dcm2niix, since that's had the best results overall when converting dicom
-to nifti, even though it's a UNIX command
-"""
-
-def compile_dicom_folder(dicom_folder,db_builder=None):
+def compile_dicom_folder(dicom_folder: str,db_builder=None):
+	"""Converts a folder of dicoms to a .nii.gz, with .json metadata
+	
+	Uses dcm2niix, since that's had the best results overall when converting
+	dicom to nifti, even though it's a system command. Uses pydicom as a backup.
+	The resulting files are stored in the folder. Also takes a DatabaseWrapper
+	object for building the database in real time.
+	"""
+	
 	if dcm2niix_installed:
 		if platform_system == "Windows":
 			os.system('dcm2niix %s 2> nul' % os.path.join(dicom_folder,'*.dcm'))
@@ -77,7 +93,6 @@ def compile_dicom_folder(dicom_folder,db_builder=None):
 					json_dict[n] = element.value
 	with open(os.path.join(dicom_folder,json_file),'w') as fileobj:
 		json.dump(json_dict,fileobj,indent=4)
-		#except dicom2nifti.exceptions.ConversionError:
 	nii_file = date_sorter(dicom_folder,'.nii*')
 	if len(nii_file) > 0:
 		nii_file = nii_file[-1]
@@ -90,7 +105,18 @@ def compile_dicom_folder(dicom_folder,db_builder=None):
 		raise Exception("No nii file in %s" % dicom_folder)
 	return nii_file,json_file
 
-def get_dim_str(filename=None,dim=None,outtype = ".npy"):
+def get_dim_str(filename: str = None,
+	dim: tuple = None,
+	outtype: str = ".npy") -> str:
+	"""Converts an input filename to the filename of the cached .npy file
+	
+	Given an input filename (e.g. /path/to/myfile.nii.gz) with a given dimension
+	(e.g. (96,48,48)), converts the filepath to the cached version (e.g.
+	/path/to/myfile_resized_96_48_48.npy). Perfect cube dimensions are annotated
+	with a single number rather than three. If no filename is input, the
+	string itself is returned (resized_96_48_48.npy).
+	"""
+	
 	if max(dim) == min(dim):
 		dim_str = str(dim[0])
 	else:
@@ -104,9 +130,6 @@ def get_dim_str(filename=None,dim=None,outtype = ".npy"):
 			elif ext1.lower() == ".npy":
 				foo = re.sub("resized_[0-9].*.npy$",
 						f"resized_{dim_str}.npy",filename)
-				print(filename)
-				print(foo)
-				print("get_dim_str")
 				return foo
 			return "%s_resized_%s.npy" % (base,dim_str)
 		elif outtype == "dicom":
@@ -117,12 +140,15 @@ def get_dim_str(filename=None,dim=None,outtype = ".npy"):
 				return filename.replace(f"_resized_{dim_str}.npy",outtype)
 			else:
 				return filename.replace(ext2+ext1,outtype)
-	#assert(".nii" in [ext1.lower(),ext2.lower()])
 	else:
 		return dim_str
 
-# Downloads and caches pretrained model weights
-def download_file_from_google_drive(file_id, destination):
+def download_file_from_google_drive(file_id: str, destination: str):
+	"""Downloads files from Google drive
+	
+	Downloads files from Google drive and saves them to a destination.
+	"""
+	
 	URL = "https://docs.google.com/uc?export=download&confirm=t"
 
 	session = requests.Session()
@@ -145,20 +171,23 @@ def get_confirm_token(response):
 	for key, value in response.cookies.items():
 		if key.startswith("download_warning"):
 			return value
-
 	return None
-
 
 def save_response_content(response, destination):
 	CHUNK_SIZE = 32768
-
 	with open(destination, "wb") as f:
 		for chunk in response.iter_content(CHUNK_SIZE):
 			if chunk:  # filter out keep-alive new chunks
 				f.write(chunk)
 
-import requests,gdown
-def download_weights(weights):
+def download_weights(weights: str):
+	"""Downloads and caches pretrained model weights
+	
+	Downloads model weights from Google drive and stores them in the user's
+	cache for future use.
+	"""
+	
+	drive_url = "https://drive.google.com/uc?export=download&confirm=pbef&id="
 	weights_dir = os.path.join(user_cache_dir(),"MultiMedImageML","weights")
 	print(weights_dir)
 	os.makedirs(weights_dir,exist_ok=True)
@@ -167,12 +196,9 @@ def download_weights(weights):
 		return weights_file
 	weights_lib_json = os.path.join(weights_dir,"weights.json")
 	if not os.path.isfile(weights_lib_json):
-		#download_file_from_google_drive(
-		#	"1Scl5iib7V5pWRULKnc6-k0edN2YfGhc7",
-		#	weights_lib_json)
 		file_id = "1Scl5iib7V5pWRULKnc6-k0edN2YfGhc7"
 		gdown.download(
-			f"https://drive.google.com/uc?export=download&confirm=pbef&id={file_id}",
+			f"{drive_url}{file_id}",
    	 		weights_lib_json
 		)
 	with open(weights_lib_json,'r') as fileobj:
@@ -183,19 +209,21 @@ def download_weights(weights):
 			(weights," ".join(list(weights_lib)))
 			)
 	else:
-		#download_file_from_google_drive(
-		#	weights_lib[weights],
-		#	weights_file)
 		file_id = weights_lib[weights]
 		gdown.download(
-			f"https://drive.google.com/uc?export=download&confirm=pbef&id={file_id}",
+			f"{drive_url}{file_id}",
    	 		weights_file
 		)
 	assert(os.path.isfile(weights_file))
 	return weights_file
 
-# Determines if the input is an applicable image file. Excludes temporary files
-def is_image_file(filename):
+def is_image_file(filename: str) -> bool:
+	"""Determines type of image file
+
+	Determines if the input is an applicable image file. Excludes temporary
+	files.
+	"""
+	
 	basename,ext = os.path.splitext(filename)
 	_,ext2 = os.path.splitext(basename)
 	ext = ext2 + ext
@@ -203,12 +231,38 @@ def is_image_file(filename):
 	if not not_temp(basename): return False
 	return ext.lower() in [".nii",".nii.gz"]
 
-# Determines if file is dicom
 def is_dicom(filename):
+	"""Determines if file is dicom
+	
+	"""
+	
 	basename,ext = os.path.splitext(filename)
 	return ext.lower() == ".dcm"
 
-# Three functions that search a folder path for all applicable images.
+def get_file_list(obj,allow_list_of_list : str =True,db_builder=None):
+	"""Searches a folder tree for all applicable images.
+	
+	Uses the os.walk method to search a folder tree and returns a list of image
+	files. Relies on get_file_list_from_str and get_file_list_from_list to do 
+	so. Takes in a DataBaseWrapper (db_builder) to build up a pandas dataframe
+	during the search.
+	"""
+
+	if isinstance(obj,str):
+		obj = get_file_list_from_str(obj,db_builder=db_builder)
+	elif isinstance(obj,list):
+		obj = get_file_list_from_list(obj,db_builder=db_builder)
+	else:
+		raise Exception("Invalid path input")
+	assert(isinstance(obj,list))
+	assert(np.all([isinstance(_,str) for _ in obj]))
+	if np.all([len(_) == 0 for _ in obj]):
+		raise Exception("No valid files found")
+	elif np.any([len(_) == 0 for _ in obj]):
+		raise Exception("One without valid files")
+	return obj
+
+
 def get_file_list_from_str(obj,db_builder=None):
 	assert(isinstance(obj, str))
 	if os.path.isfile(obj):
@@ -255,21 +309,6 @@ def get_file_list_from_list(obj,allow_list_of_list=True,db_builder=None):
 		raise Exception("""Inputs must be strings, lists of lists,
 			or lists of strings""")
 
-def get_file_list(obj,allow_list_of_list=True,db_builder=None):
-	if isinstance(obj,str):
-		obj = get_file_list_from_str(obj,db_builder=db_builder)
-	elif isinstance(obj,list):
-		obj = get_file_list_from_list(obj,db_builder=db_builder)
-	else:
-		raise Exception("Invalid path input")
-	assert(isinstance(obj,list))
-	assert(np.all([isinstance(_,str) for _ in obj]))
-	if np.all([len(_) == 0 for _ in obj]):
-		raise Exception("No valid files found")
-	elif np.any([len(_) == 0 for _ in obj]):
-		raise Exception("One without valid files")
-	return obj
-
 # Ad-hoc function that determines whether given keys are equal
 def equal_terms(term):
 	trans_dict = {'NOT_HISPANIC':'NO_NON_HISPANIC',
@@ -292,9 +331,13 @@ def date_sorter(folder,ext):
 	filelist = sorted(filelist,key=os.path.getmtime)
 	return filelist
 
-# Takes a folder of dicom files and turns it into a .nii.gz file, with metadata.
-# stored in a .json file. Relies on dcm2niix.
 def compile_dicom(dicom_folder,cache=True,db_builder=None):
+	"""Compiles a folder of DICOMs into a .nii and .json file
+	
+	Takes a folder of dicom files and turns it into a .nii.gz file, with
+	metadata stored in a .json file. Relies on dcm2niix.
+	"""
+
 	assert(os.path.isdir(dicom_folder))
 	json_file = date_sorter(dicom_folder,'.json')
 	nii_file = date_sorter(dicom_folder,'.nii*')
