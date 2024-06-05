@@ -331,11 +331,17 @@ def date_sorter(folder,ext):
 	filelist = sorted(filelist,key=os.path.getmtime)
 	return filelist
 
-def compile_dicom(dicom_folder,cache=True,db_builder=None):
+def compile_dicom(dicom_folder: str,cache=True,db_builder=None):
 	"""Compiles a folder of DICOMs into a .nii and .json file
 	
 	Takes a folder of dicom files and turns it into a .nii.gz file, with
 	metadata stored in a .json file. Relies on dcm2niix.
+	
+	Args:
+		dicom_folder (str): The folder with DICOM files
+		cache (bool): Whether to cache .npy files in the DICOM folder
+		db_builder (str): Object that may optionally be input for building up the database
+
 	"""
 
 	assert(os.path.isdir(dicom_folder))
@@ -843,15 +849,15 @@ def determine_random_partition(arr2d,labels):
 # labels, as well as encoded confounds, if specified, as either a set of strings
 # or binary arrays
 def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
-		return_as_strs = False,unique_test_vals = None,all_vars=None,
+		return_as_strs = False,unique_test_vals = None,database=None,
 		return_choice_arr = False,dict_obj=None,return_as_dict=False,
 		key_to_filename = None,X_encoder=None,vae_encoder=False,uniques=None,
 		density_confound_sort=True,n_buckets=3):
 	if dict_obj is not None:
 		if "uniques" in dict_obj:
 			uniques = dict_obj["uniques"]
-	if all_vars is None and test_variable is not None:
-		all_vars = pd.read_pickle(pandas_output)
+	if database is None and test_variable is not None:
+		database = pd.read_pickle(pandas_output)
 	if key_to_filename is not None:
 		X_filenames_list = [key_to_filename(_) for _ in filename_list]
 	else:
@@ -900,10 +906,10 @@ def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 		X[i,...] = X_single
 		if test_variable is not None:
 			for j,t in enumerate(test_variable):
-				Y_strs[j][i] = str_to_list(all_vars.loc[f_key,t],nospace=True)
+				Y_strs[j][i] = str_to_list(database.loc[f_key,t],nospace=True)
 			if confounds is not None:
 				for j,c in enumerate(confounds):
-					confound_strs[i][j] = all_vars.loc[f_key,c]
+					confound_strs[i][j] = database.loc[f_key,c]
 	filename_list = list(np.array(filename_list)[selection])
 	X_filenames_list = list(np.array(X_filenames_list)[selection])
 	X = X[selection,...]
@@ -923,7 +929,7 @@ def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 			mlb.fit([unique_test_vals])
 		else:
 			Y_strs_all = [[] for _ in test_variable]
-			for s in all_vars.loc[:,t]:
+			for s in database.loc[:,t]:
 				if not is_nan(s):
 					Y_strs_all[j].append(str_to_list(s,nospace=True))
 				else:
@@ -942,7 +948,7 @@ def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 			uniques = {}
 			for c in confounds:
 				uniques[c] = {}
-				lis = list(all_vars.loc[:,c])
+				lis = list(database.loc[:,c])
 				if np.any([isinstance(_,str) for _ in lis]):
 					uniques[c]["discrete"] = True
 					u = {}
@@ -1090,13 +1096,13 @@ def get_balanced_filename_list(test_variable,confounds_array,
 		selection_limits = [np.Inf,np.Inf,np.Inf],value_ranges = [],
 		output_selection_savepath = None,test_value_ranges=None,
 		get_all_test_set=False,total_size_limit=None,
-		verbose=False,non_confound_value_ranges = {},all_vars = None,
+		verbose=False,non_confound_value_ranges = {},database = None,
 		n_buckets = 10,patient_id_key=None):
 	if len(value_ranges) == 0:
 		value_ranges = [None for _ in confounds_array]
 	assert(len(value_ranges) == len(confounds_array))
 	
-	covars_df = all_vars
+	covars_df = database
 	if verbose: print("len(covars): %d" % len(covars_df))
 	value_selection = np.ones((len(covars_df),),dtype=bool)
 	for ncv in non_confound_value_ranges:
@@ -1223,17 +1229,17 @@ def parsedate(d,date_format="%Y-%m-%d %H:%M:%S"):
 	for match in datefinder.find_dates(d.replace("_"," ")): return match
 	return datetime.datetime.strptime(d.split(".")[0],date_format)
 
-def validate_all_vars(all_vars,args):
+def validate_database(database,args):
 	for c in args.confounds:
-		if c not in all_vars.columns:
+		if c not in database.columns:
 			raise Exception("Confound %s not in columns of %s"\
 				%(c,args.var_file))
 	
-	if args.label not in all_vars.columns:
+	if args.label not in database.columns:
 		raise Exception("Label %s not in columns of %s"\
 			%(args.label,args.var_file))
 	
-	for index in all_vars.index:
+	for index in database.index:
 		if os.path.splitext(index)[1] != ".npy":
 			raise Exception(("Indices of %s must all be .npy files: "+\
 				"exception at index %s") % (args.var_file,index))
@@ -1306,7 +1312,7 @@ def output_test(
 		output_results,
 		test_predictions_file,
 		mucran,
-		all_vars,
+		database,
 		X_files = None,
 		return_Xfiles = False):
 	pred   = None
@@ -1325,7 +1331,7 @@ def output_test(
 			selection_ratios=[1],
 			total_size_limit=np.inf,
 			non_confound_value_ranges = test_val_ranges,
-			all_vars=all_vars)
+			database=database)
 	temp = X_files
 	while len(X_files) > 0:
 		X_,Y_,C_,choice_arr,output_labels = get_data_from_filenames(
@@ -1334,7 +1340,7 @@ def output_test(
 					return_as_strs = False,
 					unique_test_vals = None,
 					return_choice_arr=True,
-					all_vars=all_vars)
+					database=database)
 		YC_pred = mucran.predict(X_)
 		pred_ = np.mean(YC_pred[:,:y_weight,:],axis=1)
 		c_pred_ = YC_pred[:,y_weight:,:]

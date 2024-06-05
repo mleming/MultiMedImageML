@@ -28,7 +28,7 @@ class MedImageLoader():
 			key_to_filename = key_to_filename_default,
 			batch_by_pid=True,
 			file_record_name=None,
-			all_vars = None,
+			database = None,
 			batch_size = 14,
 			dim = (96,96,96),
 			get_encoded = False,
@@ -86,17 +86,17 @@ class MedImageLoader():
 		
 		# Create or read in the image database
 		if self.pickle_input():
-			self.all_vars_file = self.image_folders[0]
-			#assert(self.cache or os.path.isfile(self.all_vars_file))
+			self.database_file = self.image_folders[0]
+			#assert(self.cache or os.path.isfile(self.database_file))
 		else:
 			os.makedirs(os.path.dirname(self.pandas_cache),
 				exist_ok=True)
-			self.all_vars_file = os.path.join(
+			self.database_file = os.path.join(
 				self.pandas_cache,
-				"all_vars_%s.pkl" % get_dim_str(dim=self.dim))
+				"database_%s.pkl" % get_dim_str(dim=self.dim))
 		
-		self.all_vars = DataBaseWrapper(
-					filename=self.all_vars_file,
+		self.database = DataBaseWrapper(
+					filename=self.database_file,
 					labels=self.label,
 					confounds=self.confounds,
 					dim=self.dim,
@@ -104,7 +104,7 @@ class MedImageLoader():
 					val_ranges=self.val_ranges)
 		if not self.pickle_input():
 			self.build_pandas_database()
-		self.all_vars.build_metadata()
+		self.database.build_metadata()
 		
 		# Determine which mode the scheduler is in
 		if (self.label is not None and len(self.label) > 0):
@@ -139,7 +139,7 @@ class MedImageLoader():
 		self.load_image_stack()
 	# Builds up the entire cache in one go — may take a while
 	def build_pandas_database(self):
-		assert(self.all_vars is not None)
+		assert(self.database is not None)
 		assert(not self.pickle_input())
 		old_mode = self.mode
 		self.mode = "iterate"
@@ -147,16 +147,16 @@ class MedImageLoader():
 		
 		for i,filename in enumerate(self.all_records.image_dict):
 			im = self.all_records.get(filename)
-			if not self.all_vars.has_im(im):
+			if not self.database.has_im(im):
 				try:
 					im.get_image()
 					im.clear_image()
 				except ImageFileError:
 					continue
 			if i % 100 == 0:
-				self.all_vars.out_dataframe()
+				self.database.out_dataframe()
 		self.all_records.clear_images()
-		self.all_vars.out_dataframe()
+		self.database.out_dataframe()
 		self.mode = old_mode
 	def pickle_input(self):
 		return len(self.image_folders) == 1 and \
@@ -171,16 +171,16 @@ class MedImageLoader():
 		return tl
 	def get_file_list(self):
 		if self.pickle_input() and self.tl() == "Folder":
-			return [[str(_) for _ in self.all_vars.get_file_list()]]
+			return [[str(_) for _ in self.database.get_file_list()]]
 		if self.mode == "iterate":
 			if self.pickle_input():
-				fname_list = [str(_) for _ in self.all_vars.get_file_list()]
-				return self.all_vars.stack_list_by_label(fname_list,self.tl())
+				fname_list = [str(_) for _ in self.database.get_file_list()]
+				return self.database.stack_list_by_label(fname_list,self.tl())
 			else:
 				all_filename_lists = []
 				duplicate_test = set()
 				for img in self.image_folders:
-					flist = get_file_list(img)#,db_builder=self.all_vars)
+					flist = get_file_list(img)#,db_builder=self.database)
 					flist_set = set(flist)
 					if len(flist_set.intersection(duplicate_test))>0:
 						raise Exception(
@@ -195,14 +195,14 @@ class MedImageLoader():
 				self.match_confounds,
 				selection_ratios=[1], total_size_limit=np.inf,
 				non_confound_value_ranges = self.val_ranges,verbose=False,
-				all_vars=self.all_vars.all_vars)
+				database=self.database.database)
 			fname_list = list(fname_list)
-			fname_list = [self.all_vars.key_to_filename(_) for _ in fname_list]
+			fname_list = [self.database.key_to_filename(_) for _ in fname_list]
 			if len(fname_list) == 0:
-				print(self.all_vars.all_vars.loc[:,self.tl()])
+				print(self.database.database.loc[:,self.tl()])
 				raise Exception("No valid files from %s" % self.tl())
 			assert(isinstance(fname_list,list))
-			return self.all_vars.stack_list_by_label(fname_list,self.tl())
+			return self.database.stack_list_by_label(fname_list,self.tl())
 		else:
 			raise Exception("Invalid mode: %s" % self.mode)
 	def _load_list_stack(self):
@@ -218,7 +218,7 @@ class MedImageLoader():
 								Y_dim = self.Y_dim,
 								C_dim = self.C_dim,
 								dtype=self.dtype,
-								all_vars = self.all_vars,
+								database = self.database,
 								cache=self.cache,
 								static_inputs = self.static_inputs)
 					self.all_records.add(filename, X_files[i][j])
@@ -282,7 +282,7 @@ class MedImageLoader():
 	def __next__(self):
 		if len(self) == 0: self.load_image_stack()
 		if self.index > len(self):
-			self.all_vars.out_dataframe()
+			self.database.out_dataframe()
 			self.index = 0
 			self.rotate_labels()
 			self.load_image_stack()
@@ -300,7 +300,7 @@ class MedImageLoader():
 				self.file_list_dict[self.tl()][b] = [im] + \
 					self.file_list_dict[self.tl()][b]
 				try:
-					if self.cache: assert self.all_vars is not None
+					if self.cache: assert self.database is not None
 					img = im.get_image(augment=self.augment)
 					temp.append(im)
 					self.index += 1

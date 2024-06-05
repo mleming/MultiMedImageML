@@ -17,8 +17,7 @@ generate_transforms = Compose([
 
 @functools.total_ordering
 class ImageRecord:
-	"""
-	A class used to represent an abstraction of an image for MedImageLoader.
+	"""A class used to represent an abstraction of an image for MedImageLoader.
 	
 	ImageRecord is used to keep and organize a given image in main memory.
 	The same image may be represented on the file system as a nifti, dicom,
@@ -27,37 +26,40 @@ class ImageRecord:
 	or read in in real time to avoid having the images take up too much 
 	space in main memory.
 	
-	Attributes
-	----------
-	
-	filename : str
-		Filename of the image
-	database : DataBaseWrapper
-		Object used to quickly look up metadata associated with the image
-		(default None)
-	dim : tuple
-		Standard dimension that the image will be resized to upon returning it
-		(default (96,96,96))
-	dtype : str
-	
-	Methods
-	-------
-	
+	Attributes:
+		filename (str): Filename of the image
+		database (str): Object used to quickly look up metadata associated with the image (default None)
+		dtype (str): Type of output (either "torch" or "numpy") (default "torch")
+		extra_info_list (list): 
+		dim (tuple): Standard dimension that the image will be resized to upon returning it (default (96,96,96))
+		Y_dim (tuple): A tuple indicating the dimension of the image's label. The first number is the number of labels associated with the image and the second is the number of choices that has. Extra choices will not affect the model but fewer will throw an error — thus, if Y_dim is (1,2) and the label has three classes, it will crash. But (1,4) will just result in an output that is always zero. This should match the Y_dim parameter in the associated MultiInputModule (default (1,32))
+		C_dim (tuple): A tuple indicating the dimension of the image's confounds. This effectively operates the same way as Y_dim, except the default number of confounds is higher (default (16,32))
+		image (Numpy array): Variable containing the actual image, at size dim. It may be None, to save memory (default None)
+		Y (Numpy array): Variable containing the encoding of the image label(s), at size Y_dim
+		C (Numpy array): Variable containing the encoding of the image confound(s), at size C_dim
+		y_on_c (bool): If true, replicates the Y array on the bottom of all C arrays. Used for regression training. C_dim must to large enough to accommodate the extra Y array or it will crash. (default True)
+		times_called (int): Counter to count the number of times get_image is called (default 0)
+		static_inputs (list): A list of values that may be called to put into the model as text
+		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
+		cached_record (bool): Path of the cached record
+		npy_file (str): Path of the cached .npy record
+		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
+		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
+		json_file (str): File name of the json that results from a DICOM being converted to nifti (default None)
 	"""
 	
 	def __init__(self,
-		filename,
+		filename: str,
 		database = None,
-		dim=(96,96,96),
-		dtype="torch",
-		ID = None,
-		extra_info_list = None,
-		y_on_c = True,
-		cache = True,
-		Y_dim = (1,32),
-		C_dim = (16,32),
-		y_nums = None,
-		c_nums = None,
+		dim : tuple = (96,96,96),
+		dtype : str ="torch",
+		extra_info_list : list = None,
+		y_on_c : bool = True,
+		cache : bool = True,
+		Y_dim : tuple = (1,32),
+		C_dim : tuple = (16,32),
+		y_nums : list = None,
+		c_nums : list = None,
 		static_inputs=[]):
 		
 		self.dim=dim
@@ -74,7 +76,6 @@ class ImageRecord:
 		self.group_by = None
 		self.bdate = None
 		self.exam_date = datetime.datetime(year=1970,month=1,day=1)
-		self.ID = None
 		self.extra_info_list = None
 		self.json_file = None
 		
@@ -220,6 +221,8 @@ class ImageRecord:
 		if self.dtype == "torch":
 			self.image = torch.tensor(self.image)
 	def get_image(self,augment=False):
+		"""Reads in and returns the image, with the option to augment"""
+		
 		if self.image is None:
 			self.read_image()
 		self.load_extra_info()
@@ -229,12 +232,14 @@ class ImageRecord:
 		else: return self.image
 	def _get_Y(self):
 		"""Returns label"""
+		
 		if self.y_nums is not None:
 			return self.y_nums
 		self.y_nums = self.database.get_label_encode(self.npy_file)
 		return self.y_nums
 	def _get_C(self):
 		"""Returns confound array"""
+		
 		if self.c_nums is not None:
 			return self.c_nums
 		self.c_nums = self.database.get_confound_encode(self.npy_file)
@@ -266,12 +271,19 @@ class ImageRecord:
 				self.C[i+len(self.database.confounds),j] = 1
 		return self.C
 	def get_C_dud(self):
+		"""Returns an array of duds with the same dimensionality as C
+		
+		Returns an array of duds with the same dimensionality as C but with all
+		values set to the first choice. Used in training the regressor. If
+		y_on_c is set to True, this replicates the Y array on the bottom rows of
+		the array."""
+		
 		if self.dtype == "numpy":
 			C_dud = np.zeros(self.C_dim)
-			C_dud[0,:len(self.database.confounds)] = 1
+			C_dud[:len(self.database.confounds),0] = 1
 		elif self.dtype == "torch":
 			C_dud = torch.zeros(self.C_dim)
-			C_dud[0,:len(self.database.confounds)] = 1
+			C_dud[:len(self.database.confounds),0] = 1
 		if self.y_on_c:
 			y_nums = self._get_Y()
 			for i,j in enumerate(y_nums):

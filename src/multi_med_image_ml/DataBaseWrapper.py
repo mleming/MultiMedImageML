@@ -10,7 +10,7 @@ class DataBaseWrapper():
 	Wrapper for Pandas table to cache some common and repeated functions
 	"""
 	def __init__(self,
-					all_vars = None,
+					database = None,
 					filename=None,
 					labels=[],
 					confounds=[],
@@ -25,30 +25,30 @@ class DataBaseWrapper():
 		self.val_ranges = val_ranges
 		self.labels = [] if labels is None else labels
 		self.confounds = [] if confounds is None else confounds
-		if all_vars is not None:
-			self.all_vars = all_vars
-			self.columns = set(self.all_vars.columns)
+		if database is not None:
+			self.database = database
+			self.columns = set(self.database.columns)
 		elif os.path.isfile(filename):
-			self.all_vars = pd.read_pickle(self.filename)
-			self.columns = set(self.all_vars.columns)
+			self.database = pd.read_pickle(self.filename)
+			self.columns = set(self.database.columns)
 		elif self.filename is not None:
 			assert(self.dim is not None)
-			self.all_vars = pd.DataFrame()
+			self.database = pd.DataFrame()
 			self.columns = set()
 		else:
 			raise Exception("DatabaseWrapper cannot have no inputs")
 		self.jdict = []
 		
-		if isinstance(self.all_vars,str) and os.path.isfile(self.all_vars)\
-			 and os.path.splitext(self.all_vars)[1] == ".pkl":
-			self.all_vars = pd.read_pickle(self.all_vars)
+		if isinstance(self.database,str) and os.path.isfile(self.database)\
+			 and os.path.splitext(self.database)[1] == ".pkl":
+			self.database = pd.read_pickle(self.database)
 	def has_im(self,im: ImageRecord):
 		fkey = self.key_to_filename(im.npy_file,reverse=True)
-		return fkey in self.all_vars.index
+		return fkey in self.database.index
 	def in_val_ranges(self,fkey: str) -> bool:
 		valid = True
 		for column_name in self.val_ranges:
-			val = self.all_vars.loc[fkey,column_name]
+			val = self.database.loc[fkey,column_name]
 			if is_nan(val,inc_null_str=True):
 				return False
 			elif isinstance(val,str):
@@ -61,18 +61,18 @@ class DataBaseWrapper():
 		return True
 	def build_metadata(self):
 		for l in self.labels:
-			if l not in self.all_vars.columns:
-				print("%s not in all_vars.columns" % l)
-				print(self.all_vars.columns)
-			assert(l in self.all_vars.columns)
+			if l not in self.database.columns:
+				print("%s not in database.columns" % l)
+				print(self.database.columns)
+			assert(l in self.database.columns)
 		for c in self.confounds:
-			assert(c in self.all_vars.columns)
+			assert(c in self.database.columns)
 		assert(len(set(self.labels).intersection(set(self.confounds)))==0)
 		self.uniques = {}
 		self.n_buckets=10
 		for c in self.confounds + self.labels:
 			self.uniques[c] = {}
-			lis = list(self.all_vars.loc[:,c])
+			lis = list(self.database.loc[:,c])
 			if np.any([isinstance(_,str) for _ in lis]):
 				self.uniques[c]["discrete"] = True
 				u = {}
@@ -224,11 +224,11 @@ class DataBaseWrapper():
 	def loc_val(self,npy_file,c):
 		fkey = self.key_to_filename(npy_file,reverse=True)
 		try:
-			#if fkey not in self.all_vars.index:
+			#if fkey not in self.database.index:
 			#	print("Error - %s not present in index. Adding..." % fkey)
-			#assert(fkey in self.all_vars.index)
+			#assert(fkey in self.database.index)
 			
-			return self.all_vars.loc[fkey,c]
+			return self.database.loc[fkey,c]
 		except KeyError:
 			nifti_file = get_dim_str(fkey,dim=self.dim,outtype=".nii.gz")
 			
@@ -241,7 +241,7 @@ class DataBaseWrapper():
 				raise Exception("Key error - no JSON: %s" % fkey)
 			self.add_json(nifti_file = nifti_file,json_file=json_file)
 			self.out_dataframe(fkey_ass=fkey)
-			return self.all_vars.loc[fkey,c]
+			return self.database.loc[fkey,c]
 	def add_json(self,nifti_file,json_file=None):
 		if not not_temp(nifti_file): return
 		if json_file is None:
@@ -255,7 +255,7 @@ class DataBaseWrapper():
 					return
 		npy_file = get_dim_str(nifti_file,self.dim)
 		fkey = self.key_to_filename(npy_file,reverse=True)
-		if fkey not in self.jdict and fkey not in self.all_vars.index:
+		if fkey not in self.jdict and fkey not in self.database.index:
 			with open(json_file,'r') as fileobj:
 				json_dict = json.load(fileobj)
 			json_dict["fkey"] = fkey
@@ -270,27 +270,27 @@ class DataBaseWrapper():
 			assert(len(self.jdict) > 0)
 	def get_file_list(self):
 		flist = list(filter(lambda k: self.in_val_ranges(k),
-				self.all_vars.index))
+				self.database.index))
 		return [self.key_to_filename(str(_)) for _ in flist]
 	def out_dataframe(self,fkey_ass = None):
 		
 		if len(self.jdict) > 0:
 			out = pd.DataFrame(self.jdict,columns = list(self.columns))
 			out.set_index("fkey",inplace=True)
-			if len(self.all_vars) > 0:
-				self.all_vars = pd.concat([self.all_vars,out],
+			if len(self.database) > 0:
+				self.database = pd.concat([self.database,out],
 						ignore_index=False,
 						join='inner')
-				if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
+				if fkey_ass is not None: assert(fkey_ass in self.database.index)
 			else:
-				self.all_vars = out
-				if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
-			assert(len(self.all_vars) > 0)
-			if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
-			self.all_vars.drop_duplicates(inplace=True)
-			if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
-			self.all_vars.to_pickle(self.filename)
-			if fkey_ass is not None: assert(fkey_ass in self.all_vars.index)
+				self.database = out
+				if fkey_ass is not None: assert(fkey_ass in self.database.index)
+			assert(len(self.database) > 0)
+			if fkey_ass is not None: assert(fkey_ass in self.database.index)
+			self.database.drop_duplicates(inplace=True)
+			if fkey_ass is not None: assert(fkey_ass in self.database.index)
+			self.database.to_pickle(self.filename)
+			if fkey_ass is not None: assert(fkey_ass in self.database.index)
 			self.jdict = []
 	def stack_list_by_label(self,filename_list,label):
 		if label in self.labels:

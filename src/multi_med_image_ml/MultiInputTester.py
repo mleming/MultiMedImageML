@@ -18,7 +18,7 @@ class MultiInputTester():
 			self.stats_record = StatsRecord(self.out_record_folder,self.name)
 		self.pid_records = None
 	def test(self,pr: BatchRecord):
-	
+		return
 	def read_json(self):
 		if self.pid_records is None: self.pid_records = AllRecords()
 		for json_file in json_files:
@@ -69,7 +69,7 @@ class MultiInputTester():
 					os.path.splitext(os.path.basename(args.images[i]))[0]))
 			ind = args.images[i]
 			np.save(out_name,nn)
-			mod = all_vars.loc[ind,"ProtocolNameSimplified"]
+			mod = database.loc[ind,"ProtocolNameSimplified"]
 			mod = "None" if mod is None else mod
 			title = "{mod:s}".format(mod = mod)
 			command_str = "image_slices_viewer.py {image_name:s} {out_name:s} --title={title:s} --rg &".format(title=title,out_name=out_name,image_name=args.images[i])
@@ -233,7 +233,7 @@ class FileRecord:
 	def get_filetypes_diff_date(self):
 		if len(self.X_files) == 1:
 			return None # "One Image"
-		self.dates = [all_vars.loc[X_file,'ExamEndDTS'] for X_file in self.X_files]
+		self.dates = [database.loc[X_file,'ExamEndDTS'] for X_file in self.X_files]
 		self.dates = list(filter(lambda k: k is not None,self.dates))
 		self.dates = [_.split(":")[0].replace("_","-") for _ in self.dates]
 		self.dates = [dateutil.parser.parse(_) for _ in self.dates]
@@ -259,7 +259,7 @@ class FileRecord:
 		return "%s+" % divides[-1]
 
 	def get_filetypes_name_num_modality(self):
-		self.filetypes = [all_vars.loc[_,all_vars_key] \
+		self.filetypes = [database.loc[_,database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
@@ -267,7 +267,7 @@ class FileRecord:
 		self.filetypes = set(self.filetypes)
 		return  str(len(self.filetypes))
 	def get_filetypes_name_modality(self):
-		self.filetypes = [all_vars.loc[_,all_vars_key] \
+		self.filetypes = [database.loc[_,database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
@@ -275,7 +275,7 @@ class FileRecord:
 		self.filetypes = set(self.filetypes)
 		return  "_".join(sorted(list(self.filetypes)))
 	def get_filetypes_name_modality_num(self):
-		self.filetypes = [all_vars.loc[_,all_vars_key] \
+		self.filetypes = [database.loc[_,database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
