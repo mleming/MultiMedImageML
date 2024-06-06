@@ -39,13 +39,15 @@ class ImageRecord:
 		C (Numpy array): Variable containing the encoding of the image confound(s), at size C_dim
 		y_on_c (bool): If true, replicates the Y array on the bottom of all C arrays. Used for regression training. C_dim must to large enough to accommodate the extra Y array or it will crash. (default True)
 		times_called (int): Counter to count the number of times get_image is called (default 0)
-		static_inputs (list): A list of values that may be called to put into the model as text
+		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
+		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
 		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
 		cached_record (bool): Path of the cached record
 		npy_file (str): Path of the cached .npy record
 		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
 		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
 		json_file (str): File name of the json that results from a DICOM being converted to nifti (default None)
+		loaded (bool): True if images are loaded into main memory, False if not (default False)
 	"""
 	
 	def __init__(self,
@@ -115,6 +117,7 @@ class ImageRecord:
 		self.group_by = self.database.get_ID(self.npy_file)
 		self.loaded = True
 	def get_static_inputs(self):
+		"""Loads in static inputs from the database"""
 		if self.static_input_res is None:
 			self.static_input_res = []
 			for key in self.static_inputs:
@@ -133,6 +136,7 @@ class ImageRecord:
 			return NotImplemented
 		return self.exam_date < other.exam_date
 	def get_image_type(self):
+		"""Determines the type of image that self.filename is"""
 		if self.image_type is None:
 			if os.path.isdir(self.filename):
 				self.image_type = "dicom_folder"
@@ -176,19 +180,18 @@ class ImageRecord:
 				return self.get_image_type()
 		return self.image_type
 	def get_mem(self):
+		"""Estimates the memory of the larger objects stored in ImageRecord"""
+		
 		if self.image is None:
 			return 0
-		#else:
-		#	return np.prod(self.image.shape) * \
-		#		np.dtype(self.image.dtype).itemsize
 		elif self.dtype == "torch":
 			return self.image.element_size() * self.image.nelement()
 		elif self.dtype == "numpy":
 			return np.prod(self.image.shape) * \
 				np.dtype(self.image.dtype).itemsize
-		#else:
-		#	raise Exception("Unimplemented dtype: %s" % self.dtype)
 	def clear_image(self):
+		"""Clears the array data from main memory"""
+		
 		del self.image
 		del self.C
 		del self.Y
@@ -291,10 +294,23 @@ class ImageRecord:
 		return C_dud
 		
 class BatchRecord():
+	"""Class that stores batches of ImageRecord
+	
+	BatchRecord essentially abstracts lists of ImageRecord so that it returns
+	them in batches. It is also used to store patient data for instances in 
+	which patients have multiple images.
+	
+	Attributes:
+		image_records (list): List of ImageRecord classes
+		dtype (str): Type to be returned, either "torch" or "numpy" (default "torch")
+		gpu_ids (list): GPU, if any, on which to read the images out to (default "")
+		channels_first (bool): Whether channels in the images are the first or last dimension (default True)
+		batch_size (int): The maximum number of images that may be returned in an instance of get_image (default 14)
+	"""
+	
 	def __init__(self,
 			image_records,
 			dtype="torch",
-			device=None,
 			sort=True,
 			batch_by_pid=False,
 			channels_first = True,
@@ -312,26 +328,9 @@ class BatchRecord():
 		self.channels_first = channels_first
 		self.batch_by_pid=batch_by_pid
 		if sort: self.image_records = sorted(image_records)
-		#assert(
-		#	np.all(
-		#		[_.group_by == self.image_records[0].group_by \
-		#			for _ in self.image_records]
-		#	)
-		#)
 		self.device=device
 		self.dtype=dtype
 		self.batch_size = batch_size
-	#def process_to_cuda(self,device):
-	#	self.Y = torch.tensor(self.Y).float().cuda(device)
-	#	self.Y = torch.unsqueeze(self.Y,1)
-	#	self.Y = self.Y[-1,...]
-	#	
-	#	self.X = torch.tensor(self.X)
-	#	self.X = torch.unsqueeze(self.X,1).float().cuda(device)
-	#	
-	#	self.C = torch.tensor(self.C).float().cuda(device)
-	#	self.C_dud = torch.tensor(self.C_dud).float().cuda(device)
-	
 	def name(self):
 		return 'BatchRecord'
 	def _get(self,callback,augment=False):
@@ -412,6 +411,19 @@ class BatchRecord():
 
 # Used for memory management purposes
 class AllRecords():
+	"""Contains a dictionary of BatchRecord
+	
+	Used to both prevent duplicate data from being called and to be able to 
+	clear all images from main memory and perform garbage collection when
+	necessary.
+	
+	Attributes:
+		image_dict (dict): Dictionary of ImageRecord, mapped by their given filename
+		mem_limit (int): Limit of memory that can be read into RAM
+		obj_size (int): Average size of an object given the image dimension of the dataloader
+		cur_mem (int): Count of current memory read in (TODO)
+	"""
+	
 	def __init__(self,dim):
 		self.image_dict = {}
 		self.mem_limit = psutil.virtual_memory().available * 0.2

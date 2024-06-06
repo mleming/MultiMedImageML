@@ -240,6 +240,31 @@ class Classifier(nn.Module):
 		return self.classifier(x)
 
 class MultiInputModule(nn.Module):
+	"""Takes variable imaging and non-imaging data and outputs a prediction
+	
+	Can take multiple, variable-sized images and static text inputs as input 
+	and output a label prediction, while also regressing confounds.
+	
+	Attributes:
+		encoder (nn.Module): Encodes input images to latent array
+		classifier (nn.Module): Takes multiple images encoded by the encoder and combines them into a single predictive value
+		regressor (nn.Module): Optional network that regresses confounds from the encoder's latent representation using adversarial regression
+		Y_dim (tuple): A tuple indicating the dimension of the image's label. The first number is the number of labels associated with the image and the second is the number of choices that has. Extra choices will not affect the model but fewer will throw an error — thus, if Y_dim is (1,2) and the label has three classes, it will crash. But (1,4) will just result in an output that is always zero. This should match the Y_dim parameter in the associated Records class (default (1,32))
+		C_dim (tuple): A tuple indicating the dimension of the image's confounds. This effectively operates the same way as Y_dim, except the default number of confounds is higher (default (16,32))
+		n_dyn_inputs (int): The maximum number of images that can be passed in (default 14)
+		n_stat_inputs (int): The maximum number of text-based static inputs that can be input into the model (default 2)
+		encode_age (bool): Encode the age of the patient on individual images prior to being input into the classifier (default False)
+		device (torch.device): GPU/CPU that the module is on (default: torch.device('cpu'))
+		weights (str): Pretrained weight indicator. Weights automatically download if this is set. Default options must be in place or results are unpredictable. (default None)
+		latent_dim (int): Size of the intermediary representation that the encoder outputs and inputs into the classifier (default 128)
+		variational (bool): Turns the encoding into a variational setup, a la a variational autoencoder, in which the encoding is sampled from a Gaussian distribution rather than a set array of numbers (default False)
+
+		remove_uncertain (bool): UNIMPLEMENTED/UNTESTED. Experimental subroutine designed to remove from consideration encoded images that are a certain "distance" from the training set (default False)
+		use_attn (bool): UNIMPLEMENTED/UNTESTED. Adds an attention mechanism to the classifier (default False)
+		num_training_samples (int): Number of training samples to sample for the uncertainty removal mechanism (default 300)
+		static_record (set): Set of static keys put into the model during training, to prevent unrecognized keys from being input during testing
+	"""
+	
 	def __init__(self,
 				Y_dim: tuple = (1,32), # Number of labels, Number of choices
 				C_dim: tuple = (16,32), # Number of labels, Number of choices
@@ -252,7 +277,7 @@ class MultiInputModule(nn.Module):
 				remove_uncertain: bool = False,
 				device = torch.device('cpu'),
 				latent_dim: int = 128,
-				weights: bool = None):
+				weights: str = None):
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters
@@ -346,16 +371,19 @@ class MultiInputModule(nn.Module):
 				self.load_state_dict(torch.load(weights))
 			else:
 				self.load_state_dict(torch.load(download_weights(weights)))
+				
 	def load_state_dict(self,state_dict,*args, **kwargs):
 		if self.regressor is not None:
 			self.regressor.load_state_dict(state_dict['regressor'])
 		super().load_state_dict(state_dict,*args,**kwargs)
 		return
+		
 	def state_dict(self,*args,**kwargs):
 		state_dict1 = super().state_dict(*args, **kwargs)
 		if self.regressor is not None:
 			state_dict1.update({'regressor':self.regressor.state_dict()})
 		return state_dict1
+		
 	def forward_ensemble(self,kwargs,n_ens=10):
 		x = []
 		for i in range(n_ens):
@@ -369,6 +397,7 @@ class MultiInputModule(nn.Module):
 			self.epsilon.scale = self.epsilon.scale.cuda(device)
 		self.regressor.cuda(device)
 		return super().cuda(device)
+		
 	def cpu(self):
 		self.device = torch.device('cpu')
 		if self.variational:
@@ -407,6 +436,18 @@ class MultiInputModule(nn.Module):
 				return_regress = False,
 				return_encoded = False,
 				encoded_input = False):
+		"""Puts image or BatchRecord through model and predicts a value.
+		
+		Args:
+			x (torch.Tensor or BatchRecord): Image or BatchRecord that contains data to be predicted
+			static_input (list): List of text to be input into model
+			dates (list[datetime.datetime]): List of dates input in the model, when a BatchRecord is not input
+			bdate (datetime.datetime): Patient birthdate, when a BatchRecord is not input
+			return_regress (bool): If True, returns the confound prediction array as a second value (default False)
+			return encoded (bool): If True, returns the encoded values of the images (default False)
+			encoded_input (bool): Indicator that X is input that's already been encoded and can be put straight into the classifier (default False)
+		
+		"""
 		dates1 = None
 		bdate1 = None
 		use_regression = hasattr(self,'regressor') and \

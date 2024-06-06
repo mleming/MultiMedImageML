@@ -5,9 +5,27 @@ from .utils import *
 from .Records import ImageRecord
 import dateutil
 
-class DataBaseWrapper():
-	"""
-	Wrapper for Pandas table to cache some common and repeated functions
+class DataBaseWrapper:
+	"""Wrapper for Pandas table to cache some common and repeated functions
+	
+	DataBaseWrapper stores a pandas dataframe that contains metadata about 
+	the images being read in. It also builds up this dataframe in real time
+	if only DICOM or NIFTI/JSON files are present. One purpose is to 
+	translate tokenized values in the dataframe to one-hot vectors that
+	can be read by a DL model in the fastest way possible. Another purpose
+	is to contain a storage of cached image files of a particular size.
+	
+	Attributes:
+		database (pandas.DataFrame): The internal Pandas dataframe (default None)
+		filename (str): The filename of the Pandas Dataframe pickle (default None)
+		labels (list): Labels that are read in by the current MedImageLoader (default [])
+		confounds (list): Confound names that are read in by the current MedImageLoader (default [])
+		val_ranges (dict): List of values that can be returned. See MedImageLoader (default {})
+		dim (tuple): Image dimensions (default None)
+		key_to_filename (callback): Function to translate a key to a filename and back (default key_to_filename_default)
+		jdict (dict): Dictionary of values read from JSON files that are accumulated and periodically merged with the pandas Dataframe (database) as it's build up. Used as an intermediary to prevent too much fragmenting in the DataFrame (default {})
+		columns (set): Columns of the database. Used for quick reference.
+		
 	"""
 	def __init__(self,
 					database = None,
@@ -15,7 +33,6 @@ class DataBaseWrapper():
 					labels=[],
 					confounds=[],
 					dim=None,
-					cdim=None,
 					key_to_filename = key_to_filename_default,
 					val_ranges={}):
 		self.key_to_filename = key_to_filename

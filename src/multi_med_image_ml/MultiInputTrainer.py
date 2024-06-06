@@ -6,12 +6,29 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
-"""
-Used to apply training updates to the Multi Input Model. May also output graphs
-of the training loss
-"""
-
-class MultiInputTrainer():
+class MultiInputTrainer:
+	"""Used to train MultiInputModule.
+	
+	MultiInputModule requires an adversarial technique to train it, and the
+	various data queueing techniques used get a bit complicated, so this 
+	method is used to abstract all of that.
+	
+	Attributes:
+		model (MultiInputModule): Input model to train
+		lr (float): Learning rate
+		loss_function: Pytorch loss function. MSE loss is used instead of class entropy because it is smoother and tends to work a bit better with the adversarial function, but this can be tested further (default nn.MSELoss)
+		name (str): Name of the model, which is used for saving checkpoints and output graphs (default 'experiment_name')
+		optimizer (torch.optim): Adam optimizer for the encoder/classifier. Incentivized to classify by the true label and set the regressor to the same values.
+		optimizer_reg (torch.optim): Adam optimizer for the encoder/regressor. Incentivized to detect confounds from each individual image.
+		loss_image_dir (str): If set, outputs images of the loss function for the optimizers over time, for the classifier, the regressor, and the adversarial loss (default None)
+		checkpoint_dir (str): If set, saves the model and optimizer state (default None)
+		save_latest_freq (int): Number of iterations before it saves the loss image and the checkpoint (default 100)
+		batch_size (int): Batch size of the training. Due to the optional-input nature, this cannot be set in the dataloader. Only one set of images can be passed through the loop at a given time. batch_size is how frequently the backpropagation algorithm is applied after graphs have accumulated (default 64)
+		verbose (bool): Whether to print (default False)
+		one_step (bool): Boolean to determine whether optimizer (True) or optimizer_reg (False) is applied
+		index (int): Counts the number of iterations the trainer has gone through
+	"""
+	
 	def __init__(self,
 		model,
 		lr=1e-5,
@@ -32,7 +49,7 @@ class MultiInputTrainer():
 		self.optimizer = torch.optim.Adam(
 			self.model.classifier_parameters(),
 			betas = betas,
-			lr= lr
+			lr = lr
 		)
 		self.optimizer_reg = torch.optim.Adam(
 			self.model.regressor.parameters(),
@@ -101,6 +118,14 @@ class MultiInputTrainer():
 		self.save_latest_freq = save_latest_freq
 		
 	def loop(self, pr: BatchRecord, dataloader = None):
+		"""Loops a single BatchRecord through one iteration
+		
+		Loops a BatchRecord through one iteration. Also switches the queues of
+		the MedImageLoader as it switches between optimizers.
+		Args:
+			pr (BatchRecord)
+		"""
+		
 		assert(isinstance(pr,BatchRecord))
 		x = self.model(pr,return_encoded=True)
 		y_pred,y_reg = self.model(x,
@@ -146,7 +171,8 @@ class MultiInputTrainer():
 					(i,float(loss_Y), float(loss_C_dud),
 					float(loss_regressor),len(self.pids_read),
 					len(self.x_files_read),self.name))
-
+		
+		# Apply updates to the optimizer
 		if self.index % self.batch_size == 0 and self.index != 0:
 			if self.one_step:
 				self.optimizer.step()
@@ -161,6 +187,7 @@ class MultiInputTrainer():
 				if dataloader is not None:
 					dataloader.switch_stack()
 			self.one_step = not self.one_step
+		
 		if self.index % self.save_latest_freq == 0 and self.index != 0:
 			if self.checkpoint_dir is not None:
 				torch.save({
