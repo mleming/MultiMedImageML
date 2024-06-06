@@ -1,5 +1,5 @@
-src
-===
+multi_med_image_ml
+==================
 
 .. toctree::
    :maxdepth: 4

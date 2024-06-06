@@ -26,6 +26,8 @@ The confound regression process essentially disguises the intermediary represent
 Getting Started
 ===============
 
+See the [Documentation](https://mleming.github.io/MultiMedImageML/build/html/).
+
 Datasets
 ========
 
