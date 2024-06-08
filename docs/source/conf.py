@@ -50,6 +50,7 @@ exclude_patterns = []
 
 html_theme = 'furo'
 html_static_path = ['_static']
+html_favicon = 'favicon.ico'
 
 import sys,os
 #wd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="prev" title="multi_med_image_ml" href="modules.html" />
 
-    <!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 -->
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 -->
         <title>multi_med_image_ml package - Multi-Input Medical Image ML Toolkit 0.0.17 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=387cc868" />
@@ -266,7 +266,7 @@
 <span id="multi-med-image-ml-databasewrapper-module"></span><h2>multi_med_image_ml.DataBaseWrapper module<a class="headerlink" href="#module-multi_med_image_ml.DataBaseWrapper" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.DataBaseWrapper.</span></span><span class="sig-name descname"><span class="pre">DataBaseWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.DataBaseWrapper.</span></span><span class="sig-name descname"><span class="pre">DataBaseWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Wrapper for Pandas table to cache some common and repeated functions</p>
 <p>DataBaseWrapper stores a pandas dataframe that contains metadata about
@@ -331,8 +331,8 @@ is to contain a storage of cached image files of a particular size.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.dim">
-<span class="sig-name descname"><span class="pre">dim</span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.dim" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.X_dim">
+<span class="sig-name descname"><span class="pre">X_dim</span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.X_dim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Image dimensions (default None)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -377,17 +377,42 @@ is to contain a storage of cached image files of a particular size.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.add_json">
 <span class="sig-name descname"><span class="pre">add_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nifti_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.add_json" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Adds a JSON from a DICOM file to the internal jdict, which will later
+be compiled into the DataFrame</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nifti_file</strong> (<em>str</em>) – Nifti (.nii.gz) file that was output by the DICOM preprocessing software</p></li>
+<li><p><strong>json_file</strong> (<em>str</em>) – JSON file was output by the DICOM preprocessing software. If not present, searches for the JSON file in the same directory as the the input nifti file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.build_metadata">
 <span class="sig-name descname"><span class="pre">build_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.build_metadata" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Builds internal lookup tables used to convert continuous and label-
+based variables to one-hot vectors that can be read by an ML model.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_ID">
-<span class="sig-name descname"><span class="pre">get_ID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_ID" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">get_ID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_ID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Patient ID, if present in the database. Attempts to
+guess it using the keys ‘PatientID’ and ‘Patient ID’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>npy_file</strong> (<em>str</em>) – Cached numpy file of the image</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>ID of the patient in question</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>id (str)</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_birth_date">
@@ -396,8 +421,20 @@ is to contain a storage of cached image files of a particular size.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_confound_encode">
-<span class="sig-name descname"><span class="pre">get_confound_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_confound_encode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">get_confound_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_confound_encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns list of integers that represent the confounds of a given input file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>npy_file</strong> (<em>str</em>) – Numpy file of the given record, which is converted into a key</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of integers indicating the nth confound of the datapoint</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cnum_list (list)</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_exam_date">
@@ -412,17 +449,48 @@ is to contain a storage of cached image files of a particular size.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_label_encode">
 <span class="sig-name descname"><span class="pre">get_label_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npy_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.get_label_encode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns list of integers that represent the confounds of a given input file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>npy_file</strong> (<em>str</em>) – Numpy file of the given record, which is converted
+into a key</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of integers indicating the nth label of the datapoint</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cnum_list (list)</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.has_im">
-<span class="sig-name descname"><span class="pre">has_im</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord" title="multi_med_image_ml.Records.ImageRecord"><span class="pre">ImageRecord</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.has_im" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">has_im</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord" title="multi_med_image_ml.Records.ImageRecord"><span class="pre">ImageRecord</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.has_im" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines if the DataBaseWrapper contains a given ImageRecord</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>im</strong> (<a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord" title="multi_med_image_ml.Records.ImageRecord"><em>ImageRecord</em></a>) – Input image</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool - Whether image is present in database</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.in_val_ranges">
 <span class="sig-name descname"><span class="pre">in_val_ranges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fkey</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.in_val_ranges" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Determines if the input fkey is in a valid value range</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fkey</strong> (<em>str</em>) – Lookup key to the pandas DataFrame</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool - Whether the key is present</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.loc_val">
@@ -432,17 +500,36 @@ is to contain a storage of cached image files of a particular size.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.out_dataframe">
 <span class="sig-name descname"><span class="pre">out_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fkey_ass</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.out_dataframe" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Merges the jdict with the dataframe and outputs it.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.parse_date">
 <span class="sig-name descname"><span class="pre">parse_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%Y-%m-%d</span> <span class="pre">%H:%M:%S'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.parse_date" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Parses the date string</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.stack_list_by_label">
 <span class="sig-name descname"><span class="pre">stack_list_by_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.stack_list_by_label" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Reorganizes an input filename list by the list of labels. So, a list
+of filenames of men and women with sex as the given input label will be
+returned as two lists of men and women.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename_list</strong> (<em>list</em>) – List of filenames</p></li>
+<li><p><strong>label</strong> (<em>str</em>) – Label to be reorganized by. Must be one of the confounds or labels in the DataBaseWrapper.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of separate filename lists</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>filename_list_stack (list[list])</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
@@ -451,7 +538,7 @@ is to contain a storage of cached image files of a particular size.</p>
 <span id="multi-med-image-ml-medimageloader-module"></span><h2>multi_med_image_ml.MedImageLoader module<a class="headerlink" href="#module-multi_med_image_ml.MedImageLoader" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MedImageLoader.</span></span><span class="sig-name descname"><span class="pre">MedImageLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*image_folders</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pandas_cache='../pandas/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_record_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size=14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim=(96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">augment=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype='torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim=(1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim=(16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_obj=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids=''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_ram=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MedImageLoader.</span></span><span class="sig-name descname"><span class="pre">MedImageLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*image_folders</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pandas_cache='../pandas/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_record_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size=14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim=(96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">augment=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype='torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim=(1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim=(16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_obj=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids=''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_ram=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Loads medical images into a format that may be used by MultiInputModule.</p>
 <p>This loader preprocesses, reshapes, augments, and batches images and
@@ -472,8 +559,8 @@ regressor.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.dim">
-<span class="sig-name descname"><span class="pre">dim</span></span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.dim" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.X_dim">
+<span class="sig-name descname"><span class="pre">X_dim</span></span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.X_dim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Three-tuple dimension to which the images will be resized to upon output (default (96,96,96))</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -518,7 +605,7 @@ regressor.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.augment">
 <span class="sig-name descname"><span class="pre">augment</span></span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.augment" title="Permalink to this definition">¶</a></dt>
-<dd><p>Whether to augment images during training. Note that this only works if the images are returned directly (i.e. return_obj = False). Otherwise images are augmented when get_image is called from ImageRecord (default True)</p>
+<dd><p>Whether to augment images during training. Note that this only works if the images are returned directly (i.e. return_obj = False). Otherwise images are augmented when get_X is called from ImageRecord (default True)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>
@@ -675,7 +762,7 @@ regressor.</p>
 <dd><p>Cache to store ImageRecords in and clear them if images in main memory get too high.s</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#multi_med_image_ml.Records.AllRecords" title="multi_med_image_ml.Records.AllRecords">AllRecords</a></p>
+<dd class="field-odd"><p>multi_med_image_loader.Records.AllRecords</p>
 </dd>
 </dl>
 </dd></dl>
@@ -683,7 +770,9 @@ regressor.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.build_pandas_database">
 <span class="sig-name descname"><span class="pre">build_pandas_database</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.build_pandas_database" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Builds up the entire Pandas DataFrame from the filesystem in one go.
+May take a while.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.get_file_list">
@@ -702,11 +791,6 @@ regressor.</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.pickle_input">
-<span class="sig-name descname"><span class="pre">pickle_input</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.pickle_input" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.read_record">
 <span class="sig-name descname"><span class="pre">read_record</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.read_record" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -715,12 +799,6 @@ regressor.</p>
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.record">
 <span class="sig-name descname"><span class="pre">record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.record" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.return_labels">
-<span class="sig-name descname"><span class="pre">return_labels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.return_labels" title="Permalink to this definition">¶</a></dt>
-<dd><p>Whether or not labels ought to be returned or just the images</p>
-</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.rotate_labels">
@@ -735,7 +813,8 @@ regressor.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader.tl">
 <span class="sig-name descname"><span class="pre">tl</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.tl" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Top label</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -1078,7 +1157,7 @@ the MedImageLoader as it switches between optimizers.
 <span id="multi-med-image-ml-records-module"></span><h2>multi_med_image_ml.Records module<a class="headerlink" href="#module-multi_med_image_ml.Records" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.AllRecords">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">AllRecords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.AllRecords" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">AllRecords</span></span><a class="headerlink" href="#multi_med_image_ml.Records.AllRecords" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Contains a dictionary of BatchRecord</p>
 <p>Used to both prevent duplicate data from being called and to be able to
@@ -1162,7 +1241,7 @@ necessary.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">BatchRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">BatchRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_text_records</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class that stores batches of ImageRecord</p>
 <p>BatchRecord essentially abstracts lists of ImageRecord so that it returns
@@ -1215,7 +1294,7 @@ which patients have multiple images.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.batch_size">
 <span class="sig-name descname"><span class="pre">batch_size</span></span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.batch_size" title="Permalink to this definition">¶</a></dt>
-<dd><p>The maximum number of images that may be returned in an instance of get_image (default 14)</p>
+<dd><p>The maximum number of images that may be returned in an instance of get_X (default 14)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>int</p>
@@ -1234,6 +1313,11 @@ which patients have multiple images.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_X">
+<span class="sig-name descname"><span class="pre">get_X</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">augment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_X" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_Y">
 <span class="sig-name descname"><span class="pre">get_Y</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_Y" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -1249,13 +1333,13 @@ which patients have multiple images.</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_image">
-<span class="sig-name descname"><span class="pre">get_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">augment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_image" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_static_inputs">
+<span class="sig-name descname"><span class="pre">get_static_inputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_static_inputs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_static_inputs">
-<span class="sig-name descname"><span class="pre">get_static_inputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_static_inputs" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord.get_text_records">
+<span class="sig-name descname"><span class="pre">get_text_records</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord.get_text_records" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1266,9 +1350,30 @@ which patients have multiple images.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">ImageRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(96,</span> <span class="pre">96,</span> <span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_info_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_on_c</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(16,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.FileLookup">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">FileLookup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npy_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fkey</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.FileLookup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.FileLookup.file">
+<span class="sig-name descname"><span class="pre">file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.FileLookup.file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.FileLookup.key">
+<span class="sig-name descname"><span class="pre">key</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.FileLookup.key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.FileLookup.npy_file">
+<span class="sig-name descname"><span class="pre">npy_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.FileLookup.npy_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">ImageRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(96,</span> <span class="pre">96,</span> <span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_info_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_on_c</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(16,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#multi_med_image_ml.Records.Record" title="multi_med_image_ml.Records.Record"><code class="xref py py-class docutils literal notranslate"><span class="pre">Record</span></code></a></p>
 <p>A class used to represent an abstraction of an image for MedImageLoader.</p>
 <p>ImageRecord is used to keep and organize a given image in main memory.
 The same image may be represented on the file system as a nifti, dicom,
@@ -1320,8 +1425,8 @@ space in main memory.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.dim">
-<span class="sig-name descname"><span class="pre">dim</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.dim" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.X_dim">
+<span class="sig-name descname"><span class="pre">X_dim</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.X_dim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Standard dimension that the image will be resized to upon returning it (default (96,96,96))</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1399,7 +1504,7 @@ space in main memory.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.times_called">
 <span class="sig-name descname"><span class="pre">times_called</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.times_called" title="Permalink to this definition">¶</a></dt>
-<dd><p>Counter to count the number of times get_image is called (default 0)</p>
+<dd><p>Counter to count the number of times get_X is called (default 0)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>int</p>
@@ -1528,25 +1633,15 @@ the array.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_X">
+<span class="sig-name descname"><span class="pre">get_X</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">augment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_X" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads in and returns the image, with the option to augment</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_Y">
 <span class="sig-name descname"><span class="pre">get_Y</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_Y" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_birth_date">
-<span class="sig-name descname"><span class="pre">get_birth_date</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_birth_date" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_exam_date">
-<span class="sig-name descname"><span class="pre">get_exam_date</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_exam_date" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_image">
-<span class="sig-name descname"><span class="pre">get_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">augment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_image" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads in and returns the image, with the option to augment</p>
-</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_image_type">
@@ -1556,20 +1651,9 @@ the array.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_mem">
-<span class="sig-name descname"><span class="pre">get_mem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_mem" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_mem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_mem" title="Permalink to this definition">¶</a></dt>
 <dd><p>Estimates the memory of the larger objects stored in ImageRecord</p>
 </dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.get_static_inputs">
-<span class="sig-name descname"><span class="pre">get_static_inputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.get_static_inputs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads in static inputs from the database</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.load_extra_info">
-<span class="sig-name descname"><span class="pre">load_extra_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.load_extra_info" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.read_image">
@@ -1577,6 +1661,66 @@ the array.</p>
 <dd></dd></dl>
 
 </dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.PatientRecord">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">PatientRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">items</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.PatientRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Returns text records, like medication history, of a given patient</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.PatientRecord.pid">
+<span class="sig-name descname"><span class="pre">pid</span></span><a class="headerlink" href="#multi_med_image_ml.Records.PatientRecord.pid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Patient ID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.PatientRecord.get_record">
+<span class="sig-name descname"><span class="pre">get_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.PatientRecord.get_record" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.PatientRecord.get_records">
+<span class="sig-name descname"><span class="pre">get_records</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">confounds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.PatientRecord.get_records" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.Record">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">Record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.Record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.Record.get_birth_date">
+<span class="sig-name descname"><span class="pre">get_birth_date</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.Record.get_birth_date" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.Record.get_exam_date">
+<span class="sig-name descname"><span class="pre">get_exam_date</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.Record.get_exam_date" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.Record.get_static_inputs">
+<span class="sig-name descname"><span class="pre">get_static_inputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.Record.get_static_inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads in static inputs from the database</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.Record.load_extra_info">
+<span class="sig-name descname"><span class="pre">load_extra_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.Record.load_extra_info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.TextRecord">
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">TextRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Record</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.TextRecord" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </section>
 <section id="module-multi_med_image_ml.models">
@@ -2303,11 +2447,6 @@ registered hooks while the latter silently ignores them.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="multi_med_image_ml.models.encode_static_inputs">
-<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">encode_static_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">static_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.encode_static_inputs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.get_age_arr">
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">get_age_arr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.get_age_arr" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -2315,11 +2454,6 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.get_age_encoding">
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">get_age_encoding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">birthdate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.get_age_encoding" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="multi_med_image_ml.models.text_to_bin">
-<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">text_to_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.text_to_bin" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -2365,7 +2499,7 @@ metadata stored in a .json file. Relies on dcm2niix.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dicom_folder</strong> (<em>str</em>) – The folder with DICOM files</p></li>
 <li><p><strong>cache</strong> (<em>bool</em>) – Whether to cache .npy files in the DICOM folder</p></li>
-<li><p><strong>db_builder</strong> (<em>str</em>) – Object that may optionally be input for building up the database</p></li>
+<li><p><strong>db_builder</strong> (<em>multi_med_image_ml.DataBaseWrapper.DateBaseWrapper</em>) – Object that may optionally be input for building up the database</p></li>
 </ul>
 </dd>
 </dl>
@@ -2379,6 +2513,14 @@ metadata stored in a .json file. Relies on dcm2niix.</p>
 dicom to nifti, even though it’s a system command. Uses pydicom as a backup.
 The resulting files are stored in the folder. Also takes a DatabaseWrapper
 object for building the database in real time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dicom_folder</strong> (<em>str</em>) – Folder of interest</p></li>
+<li><p><strong>db_builder</strong> (<em>multi_med_image_ml.DataBaseWrapper.DateBaseWrapper</em>) – Optional input for building up the database</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2425,6 +2567,14 @@ object for building the database in real time.</p>
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">download_file_from_google_drive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.download_file_from_google_drive" title="Permalink to this definition">¶</a></dt>
 <dd><p>Downloads files from Google drive</p>
 <p>Downloads files from Google drive and saves them to a destination.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_id</strong> (<em>str</em>) – ID in the Google Drive URL</p></li>
+<li><p><strong>destination</strong> (<em>str</em>) – Place to save the file to</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2433,7 +2583,17 @@ object for building the database in real time.</p>
 <dd><p>Downloads and caches pretrained model weights</p>
 <p>Downloads model weights from Google drive and stores them in the user’s
 cache for future use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>weights</strong> (<em>str</em>) – String indicating which weights can be used.</p>
+</dd>
+</dl>
 </dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="multi_med_image_ml.utils.encode_static_inputs">
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">encode_static_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">static_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.encode_static_inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.equal_terms">
@@ -2462,13 +2622,25 @@ cache for future use.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.get_dim_str">
-<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">get_dim_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.npy'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#multi_med_image_ml.utils.get_dim_str" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">get_dim_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.npy'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#multi_med_image_ml.utils.get_dim_str" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts an input filename to the filename of the cached .npy file</p>
 <p>Given an input filename (e.g. /path/to/myfile.nii.gz) with a given dimension
 (e.g. (96,48,48)), converts the filepath to the cached version (e.g.
 /path/to/myfile_resized_96_48_48.npy). Perfect cube dimensions are annotated
 with a single number rather than three. If no filename is input, the
 string itself is returned (resized_96_48_48.npy).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – Name of the file to be converted (Default None)</p></li>
+<li><p><strong>X_dim</strong> (<em>tuple</em>) – Size that the image is going to be resized to (Default None)</p></li>
+<li><p><strong>outtype</strong> (<em>str</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>String of the cached image file, or a string that can be added to a filename</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2479,6 +2651,15 @@ string itself is returned (resized_96_48_48.npy).</p>
 files. Relies on get_file_list_from_str and get_file_list_from_list to do
 so. Takes in a DataBaseWrapper (db_builder) to build up a pandas dataframe
 during the search.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>list</em><em> or </em><em>str</em>) – List of string of interest</p></li>
+<li><p><strong>allow_list_of_list</strong> (<em>str</em>) – Allows lists of lists to be parsed</p></li>
+<li><p><strong>db_builder</strong> (<em>multi_med_image_ml.DataBaseWrapper.DateBaseWrapper</em>) – Optional input to allow database to be build up</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2545,9 +2726,17 @@ during the search.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.is_image_file">
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">is_image_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#multi_med_image_ml.utils.is_image_file" title="Permalink to this definition">¶</a></dt>
-<dd><p>Determines type of image file</p>
+<dd><p>Determines if input file is medical image</p>
 <p>Determines if the input is an applicable image file. Excludes temporary
 files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – Path to file</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2591,7 +2780,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.nifti_to_np">
-<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">nifti_to_np</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nifti_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_image_dim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.nifti_to_np" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">nifti_to_np</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nifti_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.nifti_to_np" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -2687,6 +2876,12 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="multi_med_image_ml.utils.text_to_bin">
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">text_to_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.text_to_bin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes strings as binary arrays</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.validate_database">
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">validate_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.validate_database" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -2753,7 +2948,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.labels"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.labels</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.confounds"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.confounds</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.val_ranges"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.val_ranges</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.dim"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.dim</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.X_dim"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.X_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.key_to_filename"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.key_to_filename</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.jdict"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.jdict</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.columns"><code class="docutils literal notranslate"><span class="pre">DataBaseWrapper.columns</span></code></a></li>
@@ -2778,7 +2973,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#module-multi_med_image_ml.MedImageLoader">multi_med_image_ml.MedImageLoader module</a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader"><code class="docutils literal notranslate"><span class="pre">MedImageLoader</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.database"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.database</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.dim"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.dim</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.X_dim"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.X_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.Y_dim"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.Y_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.C_dim"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.C_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.batch_size"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.batch_size</span></code></a></li>
@@ -2801,10 +2996,8 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.get_file_list"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.get_file_list()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.load_image_stack"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.load_image_stack()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.name"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.name()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.pickle_input"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.pickle_input()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.read_record"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.read_record()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.record"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.record()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.return_labels"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.return_labels()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.rotate_labels"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.rotate_labels()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.switch_stack"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.switch_stack()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.MedImageLoader.tl"><code class="docutils literal notranslate"><span class="pre">MedImageLoader.tl()</span></code></a></li>
@@ -2900,12 +3093,19 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.batch_size"><code class="docutils literal notranslate"><span class="pre">BatchRecord.batch_size</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_C"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_C()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_C_dud"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_C_dud()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_X"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_X()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_Y"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_Y()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_birth_dates"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_birth_dates()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_exam_dates"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_exam_dates()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_image"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_image()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_static_inputs"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_static_inputs()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.get_text_records"><code class="docutils literal notranslate"><span class="pre">BatchRecord.get_text_records()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord.name"><code class="docutils literal notranslate"><span class="pre">BatchRecord.name()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.FileLookup"><code class="docutils literal notranslate"><span class="pre">FileLookup</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.FileLookup.file"><code class="docutils literal notranslate"><span class="pre">FileLookup.file()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.FileLookup.key"><code class="docutils literal notranslate"><span class="pre">FileLookup.key()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.FileLookup.npy_file"><code class="docutils literal notranslate"><span class="pre">FileLookup.npy_file()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord"><code class="docutils literal notranslate"><span class="pre">ImageRecord</span></code></a><ul>
@@ -2913,7 +3113,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.database"><code class="docutils literal notranslate"><span class="pre">ImageRecord.database</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.dtype"><code class="docutils literal notranslate"><span class="pre">ImageRecord.dtype</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.extra_info_list"><code class="docutils literal notranslate"><span class="pre">ImageRecord.extra_info_list</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.dim"><code class="docutils literal notranslate"><span class="pre">ImageRecord.dim</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.X_dim"><code class="docutils literal notranslate"><span class="pre">ImageRecord.X_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.Y_dim"><code class="docutils literal notranslate"><span class="pre">ImageRecord.Y_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.C_dim"><code class="docutils literal notranslate"><span class="pre">ImageRecord.C_dim</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.image"><code class="docutils literal notranslate"><span class="pre">ImageRecord.image</span></code></a></li>
@@ -2933,17 +3133,27 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.clear_image"><code class="docutils literal notranslate"><span class="pre">ImageRecord.clear_image()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_C"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_C()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_C_dud"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_C_dud()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_X"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_X()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_Y"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_Y()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_birth_date"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_birth_date()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_exam_date"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_exam_date()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_image"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_image()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_image_type"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_image_type()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_mem"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_mem()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.get_static_inputs"><code class="docutils literal notranslate"><span class="pre">ImageRecord.get_static_inputs()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.load_extra_info"><code class="docutils literal notranslate"><span class="pre">ImageRecord.load_extra_info()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.read_image"><code class="docutils literal notranslate"><span class="pre">ImageRecord.read_image()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.PatientRecord"><code class="docutils literal notranslate"><span class="pre">PatientRecord</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.PatientRecord.pid"><code class="docutils literal notranslate"><span class="pre">PatientRecord.pid</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.PatientRecord.get_record"><code class="docutils literal notranslate"><span class="pre">PatientRecord.get_record()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.PatientRecord.get_records"><code class="docutils literal notranslate"><span class="pre">PatientRecord.get_records()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.Record"><code class="docutils literal notranslate"><span class="pre">Record</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.Record.get_birth_date"><code class="docutils literal notranslate"><span class="pre">Record.get_birth_date()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.Record.get_exam_date"><code class="docutils literal notranslate"><span class="pre">Record.get_exam_date()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.Record.get_static_inputs"><code class="docutils literal notranslate"><span class="pre">Record.get_static_inputs()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.Record.load_extra_info"><code class="docutils literal notranslate"><span class="pre">Record.load_extra_info()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multi_med_image_ml.Records.TextRecord"><code class="docutils literal notranslate"><span class="pre">TextRecord()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-multi_med_image_ml.models">multi_med_image_ml.models module</a><ul>
@@ -3013,10 +3223,8 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Reshape.training"><code class="docutils literal notranslate"><span class="pre">Reshape.training</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#multi_med_image_ml.models.encode_static_inputs"><code class="docutils literal notranslate"><span class="pre">encode_static_inputs()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.get_age_arr"><code class="docutils literal notranslate"><span class="pre">get_age_arr()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.get_age_encoding"><code class="docutils literal notranslate"><span class="pre">get_age_encoding()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.models.text_to_bin"><code class="docutils literal notranslate"><span class="pre">text_to_bin()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.time_index"><code class="docutils literal notranslate"><span class="pre">time_index()</span></code></a></li>
 </ul>
 </li>
@@ -3035,6 +3243,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.discretize_value"><code class="docutils literal notranslate"><span class="pre">discretize_value()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.download_file_from_google_drive"><code class="docutils literal notranslate"><span class="pre">download_file_from_google_drive()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.download_weights"><code class="docutils literal notranslate"><span class="pre">download_weights()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.utils.encode_static_inputs"><code class="docutils literal notranslate"><span class="pre">encode_static_inputs()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.equal_terms"><code class="docutils literal notranslate"><span class="pre">equal_terms()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.get_balanced_filename_list"><code class="docutils literal notranslate"><span class="pre">get_balanced_filename_list()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.get_class_selection"><code class="docutils literal notranslate"><span class="pre">get_class_selection()</span></code></a></li>
@@ -3076,6 +3285,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.str_to_list"><code class="docutils literal notranslate"><span class="pre">str_to_list()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.tensor2im"><code class="docutils literal notranslate"><span class="pre">tensor2im()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.test_all"><code class="docutils literal notranslate"><span class="pre">test_all()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.utils.text_to_bin"><code class="docutils literal notranslate"><span class="pre">text_to_bin()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.utils.validate_database"><code class="docutils literal notranslate"><span class="pre">validate_database()</span></code></a></li>
 </ul>
 </li>

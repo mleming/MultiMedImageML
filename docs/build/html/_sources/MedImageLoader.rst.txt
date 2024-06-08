@@ -1,7 +1,0 @@
-Medical Image Loader
-====================
-
-.. toctree::
-   :maxdepth: 4
-
-.. autofunction:: multi_med_image_ml.MedImageLoader.MedImageLoader

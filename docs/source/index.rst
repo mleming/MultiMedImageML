@@ -7,7 +7,7 @@ Welcome to Multi-Input Medical Image ML Toolkit's documentation!
 ================================================================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
    :caption: Contents:
 
 Indices and tables
