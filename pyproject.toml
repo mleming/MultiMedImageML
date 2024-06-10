@@ -2,7 +2,7 @@
 
 name = "multi_med_image_ml"
 
-version = "0.0.19"
+version = "0.0.20"
 
 dependencies = [
   "numpy>=1.22.0",
@@ -14,7 +14,7 @@ dependencies = [
   "pillow>=9.3.0",
   "nibabel>=5.2.1",
   "datefinder",
-  "monai>=9.3.1",
+  "monai>=1.3.1",
   "dicom2nifti",
   "python-dateutil",
   "scikit-learn>=1.2.0",
