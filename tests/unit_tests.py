@@ -16,7 +16,7 @@ nifti_im = os.path.join(im1,'I13722_ADNI_12M4_TS_2_20060418081744_3.nii.gz')
 npy_im = os.path.join(im1,'I13722_ADNI_12M4_TS_2_20060418081744_3_resized_4_5_6.npy')
 #'/Users/mleming/Desktop/MultiMedImageML/data/ADNI_sample/002/002_S_0295/MP-RAGE/2006-04-18_08_20_30.0/I13722/I13722_ADNI_12M4_TS_2_20060418081744_3_resized_4_5_6.npy'
 #imfile_svs = os.path.join(im_root,'10447627_1.svs')
-pandas_file = '../pandas/all_vars_48_32_24.pkl'
+pandas_file = '../pandas/database_48_32_24.pkl'
 sys.path.insert(0,wd)
 sys.path.insert(0,os.path.join(wd,'src'))
 sys.path.insert(0,os.path.join(wd,'src','multi_med_image_ml'))
@@ -71,15 +71,15 @@ class TestSimple(unittest.TestCase):
 			os.remove(nifti_file2)
 	def test_single_im_load(self):
 		return
-		im = ImageRecord(im1,dim=(24,48,32),cache=False)
-		img = im.get_image()
+		im = ImageRecord(im1,X_dim=(24,48,32),cache=False)
+		img = im.get_X()
 		self.assertEqual(img.shape[0], 24)
 		self.assertEqual(img.shape[1], 48)
 		self.assertEqual(img.shape[2], 32)
 	def test_cache(self):
 		return
-		im = ImageRecord(im1,dim=(33,16,3),cache=True)
-		img = im.get_image()
+		im = ImageRecord(im1,X_dim=(33,16,3),cache=True)
+		img = im.get_X()
 		self.assertEqual(img.shape[0], 33)
 		self.assertEqual(img.shape[1], 16)
 		self.assertEqual(img.shape[2], 3)
@@ -90,34 +90,32 @@ class TestSimple(unittest.TestCase):
 			os.remove(im.cached_record)
 	def test_single_nifti_load(self):
 		return
-		im = ImageRecord(nifti_im,dim=(4,5,6),cache=True)
-		img = im.get_image()
+		im = ImageRecord(nifti_im,X_dim=(4,5,6),cache=True)
+		img = im.get_X()
 		self.assertEqual(img.shape[0], 4)
 		self.assertEqual(img.shape[1], 5)
 		self.assertEqual(img.shape[2], 6)
 	def test_npy_load(self):
 		return
 		#self.assertTrue(os.path.isfile(npy_im))
-		im = ImageRecord(npy_im,dim=(4,5,6))
-		img = im.get_image()
+		im = ImageRecord(npy_im,X_dim=(4,5,6))
+		img = im.get_X()
 		self.assertEqual(img.shape[0], 4)
 		self.assertEqual(img.shape[1], 5)
 		self.assertEqual(img.shape[2], 6)	
 	def test_single_nifti_load_torch(self):
-		return
-		im = ImageRecord(nifti_im,dim=(4,5,6),cache=False,
+		im = ImageRecord(nifti_im,X_dim=(4,5,6),cache=False,
 			dtype='torch')
-		img = im.get_image()
+		img = im.get_X()
 		self.assertTrue(torch.is_tensor(img))
 		self.assertEqual(img.size()[0], 4)
 		self.assertEqual(img.size()[1], 5)
 		self.assertEqual(img.size()[2], 6)
 	def test_basic_load_torch(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
-					dim=(48,32,24),
+					X_dim=(48,32,24),
 					dtype="torch",
 					batch_size=16,
 					cache = False,
@@ -131,11 +129,10 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 	def test_basic_load_numpy(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
-					dim=(48,32,24),
+					X_dim=(48,32,24),
 					dtype="numpy",
 					batch_size=16,
 					cache = False,
@@ -149,11 +146,10 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 	def test_pandas(self):
-		return
 		medim_loader = MedImageLoader(
 					imfolder1,
 					imfolder2,
-					dim = (48,32,24),
+					X_dim = (48,32,24),
 					dtype = "numpy",
 					cache = True,
 					channels_first=False)
@@ -166,7 +162,7 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[1], 48)
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
-		pandas_file = medim_loader.all_vars_file
+		pandas_file = medim_loader.database_file
 		self.assertTrue(os.path.isfile(pandas_file))
 		df = pd.read_pickle(pandas_file)
 		self.assertTrue(len(df) > 10)
@@ -182,17 +178,16 @@ class TestSimple(unittest.TestCase):
 					self.assertTrue(fpath in df.index)
 		
 	def test_pandas_2(self):
-		return
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
-			dim=(48,32,24),
+			X_dim=(48,32,24),
 			cache=True,
 			dtype="numpy",
 			channels_first=False)
 		for image,label in medim_loader: continue
-		pandas_file = medim_loader.all_vars_file
+		pandas_file = medim_loader.database_file
 		self.assertTrue(os.path.isfile(pandas_file))
 		medim_loader = MedImageLoader(pandas_file,
-			dim=(48,32,24),dtype="numpy",channels_first=False)
+			X_dim=(48,32,24),dtype="numpy",channels_first=False)
 		self.assertEqual(medim_loader.mode,"iterate")
 		for image in medim_loader:
 			imsize = image.shape
@@ -204,18 +199,20 @@ class TestSimple(unittest.TestCase):
 	
 	def test_match_label_confounds(self):
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
-			dim=(48,32,24),
+			X_dim=(48,32,24),
 			cache=True,
 			dtype="numpy",
 			channels_first=False)
 		for image,label in medim_loader: continue 
-		pandas_file = medim_loader.all_vars_file
+		pandas_file = medim_loader.database_file
 		self.assertTrue(os.path.isfile(pandas_file))
 		medim_loader = MedImageLoader(pandas_file,
-			dim=(48,32,24),dtype="numpy",
+			X_dim=(48,32,24),
+			dtype="numpy",
 			label=["MRAcquisitionType"],
 			confounds=["PercentSampling"],
-			channels_first=False,batch_by_pid=False)
+			channels_first=False,
+			batch_by_pid=False)
 		self.assertEqual(medim_loader.mode,"match")
 		for image,label in medim_loader:
 			imsize = image.shape
@@ -226,11 +223,12 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[3], 24)
 	def test_grouping(self):
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
-			dim=(48,32,24),
+			X_dim=(48,32,24),
 			cache=True,
 			dtype="torch",
-			channels_first=False)
-		pandas_file = medim_loader.all_vars_file
+			channels_first=False,
+			batch_by_pid=False)
+		pandas_file = medim_loader.database_file
 		for image,label in medim_loader:
 			imsize = image.size()
 			self.assertEqual(len(imsize),5)
@@ -238,13 +236,13 @@ class TestSimple(unittest.TestCase):
 			self.assertEqual(imsize[2], 32)
 			self.assertEqual(imsize[3], 24)
 		medim_loader = MedImageLoader(pandas_file,
-			dim=(48,32,24),dtype="torch",
+			X_dim=(48,32,24),dtype="torch",
 			label=["MRAcquisitionType"],
 			confounds=["PercentSampling"],
 			return_obj=True,
 			channels_first=False)
 		for patient in medim_loader:
-			image = patient.get_image()
+			image = patient.get_X()
 			imsize = image.size()
 			self.assertEqual(imsize[1], 48)
 			self.assertEqual(imsize[2], 32)
@@ -267,7 +265,8 @@ class TestSimple(unittest.TestCase):
 		medim_loader = MedImageLoader(imfolder1,imfolder2,
 			return_obj=True,
 			cache=True,dtype="torch",
-			Y_dim = (32,32),C_dim=(32,32))
+			Y_dim = (32,32),
+			C_dim = (32,32),batch_by_pid=True)
 		optimizer = torch.optim.Adam(
 			model.classifier_parameters(),
 			betas = (0.5,0.999),
@@ -291,7 +290,8 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14,Y_dim=(17,4),C_dim=(13,11))
+			batch_size=14,Y_dim=(17,4),C_dim=(13,11),
+			batch_by_pid=True)
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			#print(f"Epoch {i}")
@@ -307,7 +307,9 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14,Y_dim = (13,14),C_dim=(19,21))
+			Y_dim = (13,14),
+			C_dim=(19,21),
+			batch_by_pid=True)
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			#print(f"Epoch {i}")
@@ -324,7 +326,8 @@ class TestSimple(unittest.TestCase):
 			return_obj = True,
 			dtype="torch",
 			batch_size=14,Y_dim = (13,14),C_dim=(19,21),
-			static_inputs = ["User Data 7","Slice Thickness"])
+			static_inputs = ["User Data 7","Slice Thickness"],
+			batch_by_pid=True)
 		trainer = MultiInputTrainer(model,batch_size=2)
 		for i in range(3):
 			for p in medim_loader:
@@ -340,7 +343,8 @@ class TestSimple(unittest.TestCase):
 			confounds=["Slice Thickness","Repetition Time"],
 			return_obj = True,
 			dtype="torch",
-			batch_size=14,Y_dim=(11,17),C_dim=(23,5))
+			batch_size=14,Y_dim=(11,17),C_dim=(23,5),
+			batch_by_pid=True)
 		trainer = MultiInputTrainer(model,
 					batch_size=2,
 					loss_image_dir = '../loss_images',

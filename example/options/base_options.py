@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+import json
 import pandas as pd
 
 class BaseOptions():
@@ -22,7 +23,7 @@ class BaseOptions():
 		parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
 		parser.add_argument('--dim',nargs=3,help='Dimensions of images',default=[96,96,96])
 		parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
-		parser.add_argument('--checkpoint_dir', type=str, default=os.path.join(self.wd,'checkpoint'), help='models are saved here')
+		parser.add_argument('--checkpoint_dir', type=str, default=os.path.join(os.path.dirname(self.wd),'checkpoint'), help='models are saved here')
 		parser.add_argument('--label',default=['AlzStage'],nargs='+',help='Which labels to read in')
 		parser.add_argument('--y_weight', type=int, default=6, help='Amount of weight to give to label when training it')
 		parser.add_argument('--confounds',type=str,default=['SexDSC','Ages_Buckets','Angle','MRModality','Modality','ScanningSequence'],nargs='+',help='Which confounds to read in')
@@ -44,6 +45,7 @@ class BaseOptions():
 		parser.add_argument('--variational',action='store_true',default=False,help='Trains encoder with variational sampling and KL divergence')
 		parser.add_argument('--zero_input',action='store_true',default=False,help='')
 		parser.add_argument('--remove_alz_exclusion',action='store_true',default=False,help="Removes AlzStage from val_ranges argument")
+		parser.add_argument('--precedence',default=[],nargs='+',help="If included, precedence of label values in multilabel patients")
 		self.initialized = True
 		return parser
 
@@ -105,7 +107,13 @@ class BaseOptions():
 		"""Parse our options, create checkpoints directory suffix, and set up gpu device."""
 		opt = self.gather_options()
 		opt.isTrain = self.isTrain   # train or test
-		if not isinstance(opt.val_ranges,dict): opt.val_ranges={}
+		if isinstance(opt.val_ranges,str):
+			if os.path.isfile(opt.val_ranges):
+				with open(opt.val_ranges,'r') as fileobj:
+					opt.val_ranges = json.load(fileobj)
+			else:
+				opt.val_ranges = json.loads(opt.val_ranges.replace("'",'"'))
+		elif not isinstance(opt.val_ranges,dict): opt.val_ranges={}
 		if not os.path.isfile(opt.all_vars):
 			print("%s not a file" % opt.all_vars)
 			exit()

@@ -4,6 +4,7 @@ from monai.transforms import *
 from .utils import *
 import gc
 import psutil
+import warnings
 
 generate_transforms = Compose([
 		RandAffine(prob=0.5, translate_range=10), 
@@ -15,89 +16,44 @@ generate_transforms = Compose([
 #		RandSmoothDeform(spatial_size=(96,96,96),rand_size=(96,96,96))
 #])
 
-@functools.total_ordering
-class ImageRecord:
-	"""A class used to represent an abstraction of an image for MedImageLoader.
-	
-	ImageRecord is used to keep and organize a given image in main memory.
-	The same image may be represented on the file system as a nifti, dicom,
-	or an npy file, which caches the file at a particular size. This reads
-	in the file without creating duplicates. The image may also be cleared
-	or read in in real time to avoid having the images take up too much 
-	space in main memory.
+class FileLookup:
+	def __init__(self,filename=None,npy_name=None,fkey=None):
+		self.filename=filename
+		self.npy_name=npy_name
+		self.fkey=fkey
+	def file(self):
+		return self.filename
+	def key(self):
+		return self.fkey
+	def npy_file(self):
+		return self.npy_name
+
+class PatientRecord:
+	"""Returns text records, like medication history, of a given patient
 	
 	Attributes:
-		filename (str): Filename of the image
-		database (str): Object used to quickly look up metadata associated with the image (default None)
-		dtype (str): Type of output (either "torch" or "numpy") (default "torch")
-		extra_info_list (list): 
-		dim (tuple): Standard dimension that the image will be resized to upon returning it (default (96,96,96))
-		Y_dim (tuple): A tuple indicating the dimension of the image's label. The first number is the number of labels associated with the image and the second is the number of choices that has. Extra choices will not affect the model but fewer will throw an error — thus, if Y_dim is (1,2) and the label has three classes, it will crash. But (1,4) will just result in an output that is always zero. This should match the Y_dim parameter in the associated MultiInputModule (default (1,32))
-		C_dim (tuple): A tuple indicating the dimension of the image's confounds. This effectively operates the same way as Y_dim, except the default number of confounds is higher (default (16,32))
-		image (Numpy array): Variable containing the actual image, at size dim. It may be None, to save memory (default None)
-		Y (Numpy array): Variable containing the encoding of the image label(s), at size Y_dim
-		C (Numpy array): Variable containing the encoding of the image confound(s), at size C_dim
-		y_on_c (bool): If true, replicates the Y array on the bottom of all C arrays. Used for regression training. C_dim must to large enough to accommodate the extra Y array or it will crash. (default True)
-		times_called (int): Counter to count the number of times get_image is called (default 0)
-		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
-		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
-		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
-		cached_record (bool): Path of the cached record
-		npy_file (str): Path of the cached .npy record
-		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
-		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
-		json_file (str): File name of the json that results from a DICOM being converted to nifti (default None)
-		loaded (bool): True if images are loaded into main memory, False if not (default False)
+		pid (str): Patient ID
 	"""
-	
+	def __init__(self,pid,items):
+		self.pid = pid
+		self.items # Items to be read in
+	def get_record(self,item):
+		return database
+	def get_records(self,confounds):
+		return [TextRecord(self.get_record(item)) for item in items]
+
+@functools.total_ordering
+class Record:
 	def __init__(self,
-		filename: str,
-		database = None,
-		dim : tuple = (96,96,96),
-		dtype : str ="torch",
-		extra_info_list : list = None,
-		y_on_c : bool = True,
-		cache : bool = True,
-		Y_dim : tuple = (1,32),
-		C_dim : tuple = (16,32),
-		y_nums : list = None,
-		c_nums : list = None,
-		static_inputs=[]):
-		
-		self.dim=dim
-		self.filename = filename
-		self.npy_file = get_dim_str(self.filename,self.dim)
-		self.image_type = None
-		self.dtype = dtype
-		self.database = database
-		self.Y_dim = Y_dim
-		self.C_dim = C_dim
-		self.y_on_c = y_on_c # Adds the Y value to the C array as well
-		
+		static_inputs=[],
+		database = None):
+		self.static_inputs = static_inputs
 		self.is_loaded = False			
 		self.group_by = None
 		self.bdate = None
 		self.exam_date = datetime.datetime(year=1970,month=1,day=1)
 		self.extra_info_list = None
-		self.json_file = None
-		
-		self.image = None
-		self.Y = None
-		self.C = None
-		self.y_nums = y_nums
-		self.c_nums = c_nums
-		
-		self.static_inputs = []
-		self.static_input_res = None
-		
-		self.loaded = False
-		if self.database is not None:
-			if self.npy_file in self.database.database:
-				self.load_extra_info()
-		
-		self.times_called = 0
-		self.cache = cache
-		self.cached_record = None
+		self.database = database
 	def get_exam_date(self):
 		if not self.loaded:
 			self.load_extra_info()
@@ -126,7 +82,7 @@ class ImageRecord:
 				)
 		return self.static_input_res
 	def _is_valid_operand(self, other):
-		return hasattr(other, "exam_date") and hasattr(other,"group_by")
+		return hasattr(other, "exam_date")
 	def __eq__(self, other):
 		if not self._is_valid_operand(other):
 			return NotImplemented
@@ -135,6 +91,93 @@ class ImageRecord:
 		if not self._is_valid_operand(other):
 			return NotImplemented
 		return self.exam_date < other.exam_date
+
+def TextRecord(Record):
+	def __init__(self,label,**args):
+		super(Record,self).__init__(**args)
+		self.X = None
+		self.label = label
+	def get_X(self):
+		return self.database.get_val(label)
+
+@functools.total_ordering
+class ImageRecord(Record):
+	"""A class used to represent an abstraction of an image for MedImageLoader.
+	
+	ImageRecord is used to keep and organize a given image in main memory.
+	The same image may be represented on the file system as a nifti, dicom,
+	or an npy file, which caches the file at a particular size. This reads
+	in the file without creating duplicates. The image may also be cleared
+	or read in in real time to avoid having the images take up too much 
+	space in main memory.
+	
+	Attributes:
+		filename (str): Filename of the image
+		database (str): Object used to quickly look up metadata associated with the image (default None)
+		dtype (str): Type of output (either "torch" or "numpy") (default "torch")
+		extra_info_list (list): 
+		X_dim (tuple): Standard dimension that the image will be resized to upon returning it (default (96,96,96))
+		Y_dim (tuple): A tuple indicating the dimension of the image's label. The first number is the number of labels associated with the image and the second is the number of choices that has. Extra choices will not affect the model but fewer will throw an error — thus, if Y_dim is (1,2) and the label has three classes, it will crash. But (1,4) will just result in an output that is always zero. This should match the Y_dim parameter in the associated MultiInputModule (default (1,32))
+		C_dim (tuple): A tuple indicating the dimension of the image's confounds. This effectively operates the same way as Y_dim, except the default number of confounds is higher (default (16,32))
+		image (Numpy array): Variable containing the actual image, at size dim. It may be None, to save memory (default None)
+		Y (Numpy array): Variable containing the encoding of the image label(s), at size Y_dim
+		C (Numpy array): Variable containing the encoding of the image confound(s), at size C_dim
+		y_on_c (bool): If true, replicates the Y array on the bottom of all C arrays. Used for regression training. C_dim must to large enough to accommodate the extra Y array or it will crash. (default True)
+		times_called (int): Counter to count the number of times get_X is called (default 0)
+		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
+		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
+		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
+		cached_record (bool): Path of the cached record
+		npy_file (str): Path of the cached .npy record
+		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
+		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
+		json_file (str): File name of the json that results from a DICOM being converted to nifti (default None)
+		loaded (bool): True if images are loaded into main memory, False if not (default False)
+	"""
+	
+	def __init__(self,
+		filename: str,
+		static_inputs=[],
+		database = None,
+		X_dim : tuple = (96,96,96),
+		dtype : str ="torch",
+		extra_info_list : list = None,
+		y_on_c : bool = True,
+		cache : bool = True,
+		Y_dim : tuple = (1,32),
+		C_dim : tuple = (16,32),
+		y_nums : list = None,
+		c_nums : list = None):
+		super().__init__(database=database,
+						static_inputs=static_inputs)
+		
+		self.X_dim=X_dim
+		self.filename = filename
+		self.npy_file = get_dim_str(self.filename,self.X_dim)
+		self.image_type = None
+		self.dtype = dtype
+		self.Y_dim = Y_dim
+		self.C_dim = C_dim
+		self.y_on_c = y_on_c # Adds the Y value to the C array as well
+				
+		self.X = None
+		self.Y = None
+		self.C = None
+		self.y_nums = y_nums
+		self.c_nums = c_nums
+		self.json_file = None
+
+		self.static_inputs = []
+		self.static_input_res = None
+		
+		self.loaded = False
+		if self.database is not None:
+			if self.npy_file in self.database.database:
+				self.load_extra_info()
+		
+		self.times_called = 0
+		self.cache = cache
+		self.cached_record = None
 	def get_image_type(self):
 		"""Determines the type of image that self.filename is"""
 		if self.image_type is None:
@@ -157,29 +200,29 @@ class ImageRecord:
 					"Not implemented for extension %s" % ext)
 			elif os.path.isfile(
 				get_dim_str(self.filename,
-						dim=self.dim,
+						X_dim=self.X_dim,
 						outtype='.nii.gz')):
 				self.filename = get_dim_str(self.filename,
-							dim=self.dim,
+							X_dim=self.X_dim,
 							outtype='.nii.gz')
 				return self.get_image_type()
 			elif os.path.isfile(
 				get_dim_str(self.filename,
-						dim=self.dim,
+						X_dim=self.X_dim,
 						outtype='.nii')):
 				self.filename = get_dim_str(self.filename,
-							dim=self.dim,
+							X_dim=self.X_dim,
 							outtype='.nii')
 				return self.get_image_type()
 			elif os.path.isdir(get_dim_str(self.filename,
-							dim=self.dim,
+							X_dim=self.X_dim,
 							outtype='dicom')):
 				self.filename = get_dim_str(self.filename,
-							dim=self.dim,
+							X_dim=self.X_dim,
 							outtype='dicom')
 				return self.get_image_type()
 		return self.image_type
-	def get_mem(self):
+	def get_mem(self) -> float:
 		"""Estimates the memory of the larger objects stored in ImageRecord"""
 		
 		if self.image is None:
@@ -189,13 +232,15 @@ class ImageRecord:
 		elif self.dtype == "numpy":
 			return np.prod(self.image.shape) * \
 				np.dtype(self.image.dtype).itemsize
+		else:
+			raise Exception("Invalid dtype: %s" % self.dtype)
 	def clear_image(self):
 		"""Clears the array data from main memory"""
 		
-		del self.image
+		del self.X
 		del self.C
 		del self.Y
-		self.image = None
+		self.X = None
 		self.Y = None
 		self.C = None
 	def read_image(self):
@@ -203,36 +248,36 @@ class ImageRecord:
 			self.filename,self.json_file = compile_dicom(self.filename,
 				db_builder=self.database)
 			self.image_type = None
-		self.cached_record = get_dim_str(self.filename,self.dim)
+		self.cached_record = get_dim_str(self.filename,self.X_dim)
 		if self.cache and os.path.isfile(self.cached_record):
-			self.image = np.load(self.cached_record)
+			self.X = np.load(self.cached_record)
 		elif self.get_image_type() == "nifti":
-			self.image = nb.load(self.filename).get_fdata()
+			self.X = nb.load(self.filename).get_fdata()
 		elif self.get_image_type() == "npy":
-			self.image = np.load(self.filename)
+			self.X = np.load(self.filename)
 		elif self.get_image_type() == "dicom":
-			self.image = dicom.dcmread(self.filename).pixel_array
+			self.X = dicom.dcmread(self.filename).pixel_array
 		else:
 			print("Error in %s" % self.filename)
 			print("Error in %s" % self.npy_file)
 			raise Exception("Unsupported image type: %s"%self.get_image_type())
-		self.image = resize_np(self.image,self.dim)
+		self.X = resize_np(self.X,self.X_dim)
 		if self.cache and not os.path.isfile(self.cached_record):
-			np.save(self.cached_record,self.image)
+			np.save(self.cached_record,self.X)
 		if self.database is not None:
 			self.database.add_json(nifti_file=self.filename)
 		if self.dtype == "torch":
-			self.image = torch.tensor(self.image)
-	def get_image(self,augment=False):
+			self.X = torch.tensor(self.X)
+	def get_X(self,augment=False):
 		"""Reads in and returns the image, with the option to augment"""
 		
-		if self.image is None:
+		if self.X is None:
 			self.read_image()
 		self.load_extra_info()
 		self.times_called += 1
 		if augment and self.dtype == "torch":
-			return generate_transforms(self.image)
-		else: return self.image
+			return generate_transforms(self.X)
+		else: return self.X
 	def _get_Y(self):
 		"""Returns label"""
 		
@@ -273,6 +318,7 @@ class ImageRecord:
 			for i,j in enumerate(y_nums):
 				self.C[i+len(self.database.confounds),j] = 1
 		return self.C
+		
 	def get_C_dud(self):
 		"""Returns an array of duds with the same dimensionality as C
 		
@@ -305,7 +351,7 @@ class BatchRecord():
 		dtype (str): Type to be returned, either "torch" or "numpy" (default "torch")
 		gpu_ids (list): GPU, if any, on which to read the images out to (default "")
 		channels_first (bool): Whether channels in the images are the first or last dimension (default True)
-		batch_size (int): The maximum number of images that may be returned in an instance of get_image (default 14)
+		batch_size (int): The maximum number of images that may be returned in an instance of get_X (default 14)
 	"""
 	
 	def __init__(self,
@@ -315,7 +361,8 @@ class BatchRecord():
 			batch_by_pid=False,
 			channels_first = True,
 			gpu_ids="",
-			batch_size = 14):
+			batch_size = 14,
+			get_text_records = False):
 		self.image_records = image_records
 		assert(
 			np.all(
@@ -326,22 +373,35 @@ class BatchRecord():
 			)
 		self.gpu_ids = gpu_ids
 		self.channels_first = channels_first
-		self.batch_by_pid=batch_by_pid
 		if sort: self.image_records = sorted(image_records)
-		self.device=device
 		self.dtype=dtype
 		self.batch_size = batch_size
+		self.batch_by_pid=batch_by_pid
+		self.get_text_records = get_text_records
+		if self.batch_by_pid:
+			self.pid = self.image_records[0].group_by
+			if self.get_text_records:
+				assert(np.all([(self.imr.group_by == self.pid) for imr in self.image_records]))
+				self.PatientRecord = PatientRecord(pid)
+				self.text_records = self.PatientRecord.get_record()
 	def name(self):
 		return 'BatchRecord'
+	def get_text_records(self):
+		return
 	def _get(self,callback,augment=False):
 		Xs = []
 		no_arr = False
-		
+		if callback == "Y" and self.batch_by_pid:
+			ys = [np.argmax(im.get_Y()) for im in self.image_records]
+			if(min(ys) != max(ys)):
+				warnings.warn(
+					"Warning: label values differ in Patient %s" % self.pid
+				)
 		for i,im in enumerate([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
 			else self.image_records):
 			if i >= self.batch_size: break
 			if callback == "X":
-				X = im.get_image(augment=augment)
+				X = im.get_X(augment=augment)
 				if self.dtype == "torch":
 					assert(len(X.size()) == 3)
 					if self.channels_first:
@@ -394,7 +454,7 @@ class BatchRecord():
 			return Xs #.astype(np.float32)
 		else:
 			raise Exception("Invalid dtype: %s" % self.dtype)
-	def get_image(self,augment=False):
+	def get_X(self,augment=False):
 		return self._get("X",augment=augment)
 	def get_Y(self):
 		return self._get("Y")
@@ -410,7 +470,7 @@ class BatchRecord():
 		return self._get("static_inputs")
 
 # Used for memory management purposes
-class AllRecords():
+class AllRecords:
 	"""Contains a dictionary of BatchRecord
 	
 	Used to both prevent duplicate data from being called and to be able to 
@@ -424,17 +484,14 @@ class AllRecords():
 		cur_mem (int): Count of current memory read in (TODO)
 	"""
 	
-	def __init__(self,dim):
+	def __init__(self):
 		self.image_dict = {}
 		self.mem_limit = psutil.virtual_memory().available * 0.2
 		self.cur_mem = 0
-		temp = torch.zeros(dim).float()
-		self.obj_size = temp.element_size() * temp.nelement()
-		del temp
-		gc.collect()
+		self.obj_size = None
 	def add(self,filename: str, im: ImageRecord):
 		self.image_dict[filename] = im
-		if self.obj_size is None and im.image is not None:
+		if self.obj_size is None and im.X is not None:
 			self.obj_size = im.get_mem()
 	def has(self,filename: str):
 		return filename in self.image_dict

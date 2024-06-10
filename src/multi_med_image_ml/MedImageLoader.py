@@ -33,35 +33,38 @@ class MedImageLoader:
 	
 	Attributes:
 		database (DataBaseWrapper): Object used to store and access metadata about particular files. MedImageLoader builds this automatically from a folder, or it can read from one directly if it's already been built (default None)
-		dim (tuple): Three-tuple dimension to which the images will be resized to upon output (default (96,96,96))
+		X_dim (tuple): Three-tuple dimension to which the images will be resized to upon output (default (96,96,96))
 		Y_dim (tuple): A tuple indicating the dimension of the image's label. The first number is the number of labels associated with the image and the second is the number of choices that has. Extra choices will not affect the model but fewer will throw an error — thus, if Y_dim is (1,2) and the label has three classes, it will crash. But (1,4) will just result in an output that is always zero. This should match the Y_dim parameter in the associated MultiInputModule (default (1,32))
 		C_dim (tuple): A tuple indicating the dimension of the image's confounds. This effectively operates the same way as Y_dim, except the default number of confounds is higher (default (16,32))
 		batch_size (int): Max number of images that can be read in per batch. Note that if batch_by_pid is True, this is the maximum number of images that can be read in, and it's best to set it to the same value as n_dyn_inputs in MultiInputModule (default 14)
-		augment (bool): Whether to augment images during training. Note that this only works if the images are returned directly (i.e. return_obj = False). Otherwise images are augmented when get_image is called from ImageRecord (default True)
+		augment (bool): Whether to augment images during training. Note that this only works if the images are returned directly (i.e. return_obj = False). Otherwise images are augmented when get_X is called from ImageRecord (default True)
 		dtype (str): Type of image to be returned -- either "torch" or "numpy" (default "torch")
 		label (list): List of labels that will be read in from DataBaseWrapper to the Y output. Must be smaller than the first value of Y_dim.
 		confounds (list): List of confounds that will be read in from DataBaseWrapper to the C output. Must be smaller than the first value of C_dim.
 		pandas_cache (str): Directory in which the database pandas file is stored
 		cache (str): Whether to cache images of a particular dimension as .npy files, for faster reading and indexing in the database (default True)
 		key_to_filename (callback): Function that translates a key to the DataBaseWrapper into a full filepath from which an image may be read. Needs to accept an additional parameter to reverse this as well (default key_to_filename_default)
-		batch_by_pid (bool): Whether to batch images together by their Patient ID in a BatchRecord or not (default True)
+		batch_by_pid (bool): Whether to batch images together by their Patient ID in a BatchRecord or not (default False)
 		file_record_name (str): Path of the record of files that were read in by the MedImageLoader, if it needs to be examined later (default None)
 		channels_first (bool): Whether to put channels in the first or last dimension of images (default True)
 		save_ram (bool): Clears images from ImageRecords and applies garbage collection frequently to save RAM. Useful for very large datasets (default True)
 		static_inputs (list): List of variables from DataBaseWrapper that will be input as static, per-patient text inputs (like Sex of Ethnicity) to the MultiInputModule (default None)
 		val_ranges (dict): Dictionary that may be used to indicate ranges of values that may be loaded in. So, if you want to only study males, val_ranges could be {'SexDSC':'MALE'}, and of you only wanted to study people between ages 30 and 60, val_ranges could be {'Ages':(30,60)}; these can be combined, too. Note that 'Ages' and 'SexDSC' must be present in DataBaseWrapper as metadata variable names for this to work (default {})
 		match_confounds (list): Used to apply data matching between the labels. So, if you wanted to distinguish between AD and Controls and wanted to match by age, match_confounds could be set to ['Ages'] and this would only return sets of AD and Control of the same age ranges. Note that this may severely limit the dataset or even return nothing if the match_confound variable and the label variable are mutually exclusive (default [])
-		all_records (AllRecords): Cache to store ImageRecords in and clear them if images in main memory get too high.s
+		all_records (multi_med_image_loader.Records.AllRecords): Cache to store ImageRecords in and clear them if images in main memory get too high.
+		n_dyn_inputs (int): Max number of inputs of the ML model, to be passed into BatchRecord when it's used as a patient record (default 14)
+		precedence (list): Because labeling is by image in the database and diagnosis is by patient, this option allows "precedence" in labeling when assigning an overall label to a patient. So, if a patient has three images, two marked as "Healthy" and one marked as "Alzheimer's", you can pass "[Alzheimer's,Healthy]" into precedence and it would assign the whole patient the "Alzheimer's" label (default [])
 	"""
 	def __init__(self,*image_folders,
 			pandas_cache = '../pandas/',
 			cache = True,
 			key_to_filename = key_to_filename_default,
-			batch_by_pid=True,
+			batch_by_pid=False,
 			file_record_name=None,
 			database = None,
 			batch_size = 14,
-			dim = (96,96,96),
+			X_dim = (96,96,96),
+			get_encoded = False,
 			static_inputs = None,
 			confounds = [],
 			match_confounds = [],
@@ -73,16 +76,20 @@ class MedImageLoader:
 			C_dim = (16,32),
 			return_obj = False,
 			channels_first = True,
+			recycle=True,
 			gpu_ids = "",
-			save_ram = True):
+			save_ram = True,
+			precedence = [],
+			n_dyn_inputs=14):
 		self.channels_first = channels_first
 		self.image_folders = image_folders
 		self.augment = augment
-		self.dim=dim
+		self.X_dim=X_dim
 		self.dtype=dtype
 		self.cache = cache
 		self.pandas_cache = pandas_cache
 		self.val_ranges = val_ranges
+		self.get_encoded = get_encoded
 		self.batch_by_pid = batch_by_pid
 		self.file_list_dict = {}
 		self.static_inputs = static_inputs
@@ -93,11 +100,16 @@ class MedImageLoader:
 		self.mode = None
 		self.gpu_ids = gpu_ids
 		self.save_ram = save_ram
+		self.n_dyn_inputs = n_dyn_inputs
 
+		# If set to true, restacks images every time via the data 
+		# matching function. Best for very large and imbalanced datasets
+		self.recycle=recycle
+		
 		check_key_to_filename(key_to_filename)
 
 		# Stores images so that they aren't repeated in different stacks
-		self.all_records = AllRecords(self.dim)
+		self.all_records = AllRecords()
 		# If true, this uses one match confound at a time and cycles through
 		# them
 		self.zero_data_list = []
@@ -109,7 +121,7 @@ class MedImageLoader:
 		self.return_obj = return_obj
 		
 		# Create or read in the image database
-		if self.pickle_input():
+		if self._pickle_input():
 			self.database_file = self.image_folders[0]
 			#assert(self.cache or os.path.isfile(self.database_file))
 		else:
@@ -117,16 +129,17 @@ class MedImageLoader:
 				exist_ok=True)
 			self.database_file = os.path.join(
 				self.pandas_cache,
-				"database_%s.pkl" % get_dim_str(dim=self.dim))
+				"database_%s.pkl" % get_dim_str(X_dim=self.X_dim))
 		
 		self.database = DataBaseWrapper(
 					filename=self.database_file,
 					labels=self.label,
 					confounds=self.confounds,
-					dim=self.dim,
+					X_dim=self.X_dim,
 					key_to_filename=key_to_filename,
-					val_ranges=self.val_ranges)
-		if not self.pickle_input():
+					val_ranges=self.val_ranges,
+					precedence = precedence)
+		if not self._pickle_input():
 			self.build_pandas_database()
 		self.database.build_metadata()
 		
@@ -155,16 +168,18 @@ class MedImageLoader:
 		self.file_list_dict_hidden = {}
 		self.match_confounds_hidden = []
 		self.mode_hidden = "iterate"
-		if self.return_labels():
+		if self._return_labels():
 			for l in self.label:
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
 		self.index = 0
 		self.load_image_stack()
-	# Builds up the entire cache in one go — may take a while
 	def build_pandas_database(self):
+		"""Builds up the entire Pandas DataFrame from the filesystem in one go.
+		May take a while."""
+		
 		assert(self.database is not None)
-		assert(not self.pickle_input())
+		assert(not self._pickle_input())
 		old_mode = self.mode
 		self.mode = "iterate"
 		self._load_list_stack()
@@ -173,7 +188,7 @@ class MedImageLoader:
 			im = self.all_records.get(filename)
 			if not self.database.has_im(im):
 				try:
-					im.get_image()
+					im.get_X()
 					im.clear_image()
 				except ImageFileError:
 					continue
@@ -182,11 +197,11 @@ class MedImageLoader:
 		self.all_records.clear_images()
 		self.database.out_dataframe()
 		self.mode = old_mode
-	def pickle_input(self):
+	def _pickle_input(self):
 		return len(self.image_folders) == 1 and \
 			os.path.splitext(self.image_folders[0])[1] == ".pkl"
 	def tl(self):
-		# Top label
+		"""Top label"""
 		
 		if len(self.label) == 0: tl = "Folder"
 		else: tl = self.label[0]
@@ -194,17 +209,17 @@ class MedImageLoader:
 			self.file_list_dict[tl] = []
 		return tl
 	def get_file_list(self):
-		if self.pickle_input() and self.tl() == "Folder":
+		if self._pickle_input() and self.tl() == "Folder":
 			return [[str(_) for _ in self.database.get_file_list()]]
 		if self.mode == "iterate":
-			if self.pickle_input():
+			if self._pickle_input():
 				fname_list = [str(_) for _ in self.database.get_file_list()]
 				return self.database.stack_list_by_label(fname_list,self.tl())
 			else:
 				all_filename_lists = []
 				duplicate_test = set()
 				for img in self.image_folders:
-					flist = get_file_list(img)#,db_builder=self.database)
+					flist = get_file_list(img)
 					flist_set = set(flist)
 					if len(flist_set.intersection(duplicate_test))>0:
 						raise Exception(
@@ -237,7 +252,7 @@ class MedImageLoader:
 					X_files[i][j] = self.all_records.get(filename)
 				else:
 					X_files[i][j] = ImageRecord(filename,
-								dim=self.dim,
+								X_dim=self.X_dim,
 								y_nums=[i] if len(X_files) == 1 else None,
 								Y_dim = self.Y_dim,
 								C_dim = self.C_dim,
@@ -255,33 +270,37 @@ class MedImageLoader:
 			self.file_list_dict[self.tl()] = []
 		X_files = self._load_list_stack()
 		if self.batch_by_pid:
-			pdict = {}
+			pdicts = []
 			for images in X_files:
+				pdict = {}
 				for image in images:
 					image.load_extra_info()
 					if not is_nan(image.group_by):
 						if image.group_by not in pdict:
 							pdict[image.group_by] = []
 						pdict[image.group_by].append(image)
+				pdicts.append(pdict)
 			image_record_list = []
-			for ID in pdict:
-				image_record_list.append(
+			for pdict in pdicts:
+				image_record_list.append([])
+				for ID in pdict:
+					image_record_list[-1].append(
 							BatchRecord(pdict[ID],
 							batch_by_pid=True,
 							sort=True,
 							dtype=self.dtype,
 							channels_first=self.channels_first,
 							gpu_ids = self.gpu_ids,
-							batch_size=self.batch_size))
-			X_files = [image_record_list]
+							batch_size=self.n_dyn_inputs))
+			X_files = image_record_list
 		self.file_list_dict[self.tl()] = X_files
-	def return_labels(self):
+	def _return_labels(self):
 		"""Whether or not labels ought to be returned or just the images"""
 		
 		if self.tl() == "Folder":
 			if len(self.image_folders) > 1:
 				return True
-			elif self.pickle_input():
+			elif self._pickle_input():
 				return False
 		return self.label is not None and len(self.label) > 0
 	def record(self,flist,index=None):
@@ -315,11 +334,12 @@ class MedImageLoader:
 			self.rotate_labels()
 			self.load_image_stack()
 			raise StopIteration
+		# Temporary measure
 		if self.index % 1000 == 0 and self.index != 0:
 			self.all_records.check_mem()
 		temp = []
 		for i in range(self.batch_size):
-			b = i % len(self.file_list_dict[self.tl()])
+			b = self.index % len(self.file_list_dict[self.tl()])
 			img = None
 			if len(self.file_list_dict[self.tl()][b]) == 0: continue
 			for j in range(len(self.file_list_dict[self.tl()][b])):
@@ -328,7 +348,7 @@ class MedImageLoader:
 					self.file_list_dict[self.tl()][b]
 				try:
 					if self.cache: assert self.database is not None
-					img = im.get_image(augment=self.augment)
+					img = im.get_X(augment=self.augment)
 					temp.append(im)
 					self.index += 1
 					break
@@ -354,10 +374,10 @@ class MedImageLoader:
 				batch_size=self.batch_size)
 		if self.return_obj:
 			return p
-		elif self.return_labels():
-			return p.get_image(augment=self.augment),p.get_Y()
+		elif self._return_labels():
+			return p.get_X(augment=self.augment),p.get_Y()
 		else:
-			return p.get_image(augment=self.augment)				
+			return p.get_X(augment=self.augment)				
 
 	def __len__(self):
 		l = len(self.file_list_dict[self.tl()])

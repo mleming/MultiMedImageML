@@ -66,6 +66,10 @@ def compile_dicom_folder(dicom_folder: str,db_builder=None):
 	dicom to nifti, even though it's a system command. Uses pydicom as a backup.
 	The resulting files are stored in the folder. Also takes a DatabaseWrapper
 	object for building the database in real time.
+	
+	Args:
+		dicom_folder (str): Folder of interest
+		db_builder (multi_med_image_ml.DataBaseWrapper.DateBaseWrapper): Optional input for building up the database
 	"""
 	
 	if dcm2niix_installed:
@@ -106,8 +110,8 @@ def compile_dicom_folder(dicom_folder: str,db_builder=None):
 	return nii_file,json_file
 
 def get_dim_str(filename: str = None,
-	dim: tuple = None,
-	outtype: str = ".npy") -> str:
+		X_dim: tuple = None,
+		outtype: str = ".npy") -> str:
 	"""Converts an input filename to the filename of the cached .npy file
 	
 	Given an input filename (e.g. /path/to/myfile.nii.gz) with a given dimension
@@ -115,12 +119,22 @@ def get_dim_str(filename: str = None,
 	/path/to/myfile_resized_96_48_48.npy). Perfect cube dimensions are annotated
 	with a single number rather than three. If no filename is input, the
 	string itself is returned (resized_96_48_48.npy).
+	
+	Args:
+		filename (str): Name of the file to be converted (Default None)
+		X_dim (tuple): Size that the image is going to be resized to (Default None)
+		outtype (str): 
+	
+	Returns:
+		String of the cached image file, or a string that can be added to a filename
+	
 	"""
 	
-	if max(dim) == min(dim):
-		dim_str = str(dim[0])
+	assert(X_dim is not None)
+	if max(X_dim) == min(X_dim):
+		dim_str = str(X_dim[0])
 	else:
-		dim_str = "_".join([str(_) for _ in dim])
+		dim_str = "_".join([str(_) for _ in X_dim])
 	if filename is not None:
 		base,ext1 = os.path.splitext(filename)
 		base,ext2 = os.path.splitext(base)
@@ -147,6 +161,10 @@ def download_file_from_google_drive(file_id: str, destination: str):
 	"""Downloads files from Google drive
 	
 	Downloads files from Google drive and saves them to a destination.
+	
+	Args:
+		file_id (str): ID in the Google Drive URL
+		destination (str): Place to save the file to
 	"""
 	
 	URL = "https://docs.google.com/uc?export=download&confirm=t"
@@ -185,6 +203,9 @@ def download_weights(weights: str):
 	
 	Downloads model weights from Google drive and stores them in the user's
 	cache for future use.
+	
+	Args:
+		weights (str): String indicating which weights can be used.
 	"""
 	
 	drive_url = "https://drive.google.com/uc?export=download&confirm=pbef&id="
@@ -218,10 +239,16 @@ def download_weights(weights: str):
 	return weights_file
 
 def is_image_file(filename: str) -> bool:
-	"""Determines type of image file
+	"""Determines if input file is medical image
 
 	Determines if the input is an applicable image file. Excludes temporary
 	files.
+	
+	Args:
+		filename (str): Path to file
+	
+	Returns:
+		bool
 	"""
 	
 	basename,ext = os.path.splitext(filename)
@@ -246,6 +273,11 @@ def get_file_list(obj,allow_list_of_list : str =True,db_builder=None):
 	files. Relies on get_file_list_from_str and get_file_list_from_list to do 
 	so. Takes in a DataBaseWrapper (db_builder) to build up a pandas dataframe
 	during the search.
+	
+	Args:
+		obj (list or str): List of string of interest
+		allow_list_of_list (str): Allows lists of lists to be parsed
+		db_builder (multi_med_image_ml.DataBaseWrapper.DateBaseWrapper): Optional input to allow database to be build up
 	"""
 
 	if isinstance(obj,str):
@@ -340,7 +372,7 @@ def compile_dicom(dicom_folder: str,cache=True,db_builder=None):
 	Args:
 		dicom_folder (str): The folder with DICOM files
 		cache (bool): Whether to cache .npy files in the DICOM folder
-		db_builder (str): Object that may optionally be input for building up the database
+		db_builder (multi_med_image_ml.DataBaseWrapper.DateBaseWrapper): Object that may optionally be input for building up the database
 
 	"""
 
@@ -666,15 +698,15 @@ def separate_set(selections,set_divisions = [0.5,0.5],IDs=None):
 			prime_hasher[IDs[i]] = j + 1
 	return selections_ids
 
-def nifti_to_np(nifti_filepath,output_image_dim):
+def nifti_to_np(nifti_filepath,X_dim):
 	nifti_file = nb.load(nifti_filepath)
 	nifti_data = nifti_file.get_fdata()
 	nifti_data -= nifti_data.min()
 	m = nifti_data.max()
 	nifti_data = nifti_data / m
 	nifti_data = nifti_data.astype(np.float32)
-	zp = [output_image_dim[i]/nifti_data.shape[i] \
-		for i in range(len(output_image_dim))]
+	zp = [X_dim[i]/nifti_data.shape[i] \
+		for i in range(len(X_dim))]
 	nifti_data_zoomed = ndimage.zoom(nifti_data,zp)
 	return nifti_data_zoomed
 
@@ -1472,7 +1504,7 @@ def diagnose_network(net, name='network'):
 def save_image(image_numpy, image_path, aspect_ratio=1.0):
 	"""Save a numpy image to the disk
 
-	Parameters:
+	Args:
 		image_numpy (numpy array) -- input numpy array
 		image_path (str)		  -- the path of the image
 	"""
@@ -1490,7 +1522,7 @@ def save_image(image_numpy, image_path, aspect_ratio=1.0):
 def print_numpy(x, val=True, shp=False):
 	"""Print the mean, min, max, median, std, and size of a numpy array
 
-	Parameters:
+	Args:
 		val (bool) -- if print the values of the numpy array
 		shp (bool) -- if print the shape of the numpy array
 	"""
@@ -1502,3 +1534,32 @@ def print_numpy(x, val=True, shp=False):
 		print(('mean = %3.3f, min = %3.3f, "+\
 			"max = %3.3f, median = %3.3f, std=%3.3f') % (
 			np.mean(x), np.min(x), np.max(x), np.median(x), np.std(x)))
+
+# https://stackoverflow.com/questions/26685067/represent-a-hash-string-to-binary-in-python
+# Two functions to encode strings as binary arrays
+def text_to_bin(text, n_bin=32,d=512):
+	"""Encodes strings as binary arrays"""
+	if text is None: text=""
+	text=text.lower()
+	word_ord = '{}'.format(
+			bin(int(hashlib.md5(text.encode('utf-8')).hexdigest(), n_bin))
+		)
+	word_ord = word_ord[2:]
+	arr = []
+	for i in range(d):
+		a = word_ord[i % len(word_ord)]
+		if a == "1":
+			arr.append(1.0)
+		elif a == "0":
+			arr.append(0.0)
+		else:
+			raise Exception("%s is bad"% str(a))
+	return arr
+
+def encode_static_inputs(static_input,d=512):
+	"""
+	"""
+	arr = np.zeros((len(static_input),d))
+	for i in range(len(static_input)):
+		arr[i,:] = text_to_bin(static_input[i],d=d)
+	return arr

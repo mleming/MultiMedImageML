@@ -95,7 +95,7 @@ class MultiInputTrainer:
 				self.xs,self.ys,self.ys_2,self.ys_c_dud = \
 						[list(_[i,:]) for i in range(4)]
 				if self.model.variational:
-					self.ys_kl = list(_[i,4])
+					self.ys_kl = list(_[4,:])
 	
 				self.loss_Y          = self.ys[-1]
 				self.loss_C_dud      = self.ys_c_dud[-1]
@@ -128,6 +128,12 @@ class MultiInputTrainer:
 		
 		assert(isinstance(pr,BatchRecord))
 		x = self.model(pr,return_encoded=True)
+		if pr.get_text_records:
+			x_text = encode_static_inputs(
+						pr.get_text_records(),
+						d=self.model.latent_dim
+					)
+			x = torch.concat(x,x_text,axis=0)
 		y_pred,y_reg = self.model(x,
 				encoded_input=True,
 				dates=pr.get_exam_dates(),
@@ -139,7 +145,7 @@ class MultiInputTrainer:
 			self.loss_classifier = self.loss_Y + (self.loss_C_dud)
 			if self.model.variational:
 				self.loss_kl = self.model.kl * 0.0005
-				self.loss_classifier = self.loss_classifier + loss_kl
+				self.loss_classifier = self.loss_classifier + self.loss_kl
 			self.loss_classifier.backward()
 		else:
 			if self.regress:

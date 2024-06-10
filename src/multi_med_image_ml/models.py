@@ -6,11 +6,10 @@ import random
 import itertools
 import numpy as np
 from datetime import datetime
-import hashlib
 import os,sys
 from copy import deepcopy as copy
 from .Records import ImageRecord,BatchRecord
-from .utils import download_weights
+from .utils import download_weights,text_to_bin,encode_static_inputs
 
 # Three functions that are used to get the age encoding functions
 def time_index(i,pos,d=512,c=10000):
@@ -32,32 +31,6 @@ def get_age_encoding(date,birthdate,d=512):
 		return np.zeros((d,0))
 	age = date.year - birthdate.year
 	return get_age_arr(age,d=d)
-
-# https://stackoverflow.com/questions/26685067/represent-a-hash-string-to-binary-in-python
-# Two functions to encode strings as binary arrays
-def text_to_bin(text, n_bin=32,d=512):
-	if text is None: text=""
-	text=text.lower()
-	word_ord = '{}'.format(
-			bin(int(hashlib.md5(text.encode('utf-8')).hexdigest(), n_bin))
-		)
-	word_ord = word_ord[2:]
-	arr = []
-	for i in range(d):
-		a = word_ord[i % len(word_ord)]
-		if a == "1":
-			arr.append(1.0)
-		elif a == "0":
-			arr.append(0.0)
-		else:
-			raise Exception("%s is bad"% str(a))
-	return arr
-
-def encode_static_inputs(static_input,d=512):
-	arr = np.zeros((len(static_input),d))
-	for i in range(len(static_input)):
-		arr[i,:] = text_to_bin(static_input[i],d=d)
-	return arr
 
 class Reshape(nn.Module):
 	'''
@@ -335,14 +308,14 @@ class MultiInputModule(nn.Module):
 		if self.variational:
 			self.encoder = Encoder(latent_dim=self.latent_dim)
 			self.z_mean = nn.Sequential(
-				nn.Linear(2*self.latent_dim,self.latent_dim)
+				nn.Linear(self.latent_dim,self.latent_dim)
 			)
 			self.z_log_sigma = nn.Sequential(
-				nn.Linear(2*self.latent_dim,self.latent_dim)
+				nn.Linear(self.latent_dim,self.latent_dim)
 			)
 			self.epsilon = torch.distributions.Normal(0, 1)
-			self.epsilon.loc = self.epsilon.loc.cuda(device)
-			self.epsilon.scale = self.epsilon.scale.cuda(device)
+			self.epsilon.loc = self.epsilon.loc
+			self.epsilon.scale = self.epsilon.scale
 		else:
 			self.encoder = Encoder(latent_dim=self.latent_dim)
 		# The output of the classifier and regressor, and encoder are kept
@@ -467,7 +440,7 @@ class MultiInputModule(nn.Module):
 				for i,b in enumerate(bdates):
 					if b is not None:
 						bdate1 = b
-				x = x.get_image(augment=self.training)
+				x = x.get_X(augment=self.training)
 				assert(torch.is_tensor(x))
 				
 			if (self.encode_age and (dates is None or bdate is None)):

@@ -61,7 +61,7 @@ class MultiInputTester():
 					target_layers.append(module)
 		self.model.regressor_freeze()
 		G = GradCAMPlusPlus(model=self.model,target_layers=target_layers)
-		t = G(input_tensor = pr.get_image(), targets = None)
+		t = G(input_tensor = pr.get_X(), targets = None)
 		for i in range(t.shape[0]):
 			nn = np.squeeze(t[i,...])
 			out_name = os.path.join(

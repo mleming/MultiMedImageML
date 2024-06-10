@@ -266,6 +266,26 @@
 </pre></div>
 </div>
 </section>
+<section id="data">
+<h2>Data<a class="headerlink" href="#data" title="Permalink to this heading">¶</a></h2>
+<p>Imaging data is required to get started with this. It was designed and tested with brain MRI/PET/CT data, though any 3D data is applicable. The simplest application is two folders of NIFTI images.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>from<span class="w"> </span>multi_input_med_image_loader.MedImageLoader<span class="w"> </span>import<span class="w"> </span>*
+<span class="gp">$ </span><span class="nv">folder1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;/path/to/data1&#39;</span>
+<span class="gp">$ </span><span class="nv">folder2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;/path/to/data2&#39;</span>
+<span class="gp">$ </span><span class="nv">dataloader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>MedImageLoader<span class="o">(</span>folder1,folder2<span class="o">)</span>
+<span class="gp">$ </span><span class="k">for</span><span class="w"> </span>image,label<span class="w"> </span><span class="k">in</span><span class="w"> </span>MedImageLoader:
+<span class="gp">$   </span>...
+</pre></div>
+</div>
+</section>
+<section id="model">
+<h2>Model<a class="headerlink" href="#model" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span>
+<span class="gp">$</span>
+<span class="gp">$</span>
+</pre></div>
+</div>
+</section>
 </section>
 
         </article>
@@ -325,6 +345,8 @@
             <ul>
 <li><a class="reference internal" href="#">Usage</a><ul>
 <li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#data">Data</a></li>
+<li><a class="reference internal" href="#model">Model</a></li>
 </ul>
 </li>
 </ul>
