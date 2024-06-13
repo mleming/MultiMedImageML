@@ -846,8 +846,185 @@ May take a while.</p>
 <dd></dd></dl>
 
 </section>
-<section id="multi-med-image-ml-multiinputtester-module">
-<h2>multi_med_image_ml.MultiInputTester module<a class="headerlink" href="#multi-med-image-ml-multiinputtester-module" title="Permalink to this heading">¶</a></h2>
+<section id="module-multi_med_image_ml.MultiInputTester">
+<span id="multi-med-image-ml-multiinputtester-module"></span><h2>multi_med_image_ml.MultiInputTester module<a class="headerlink" href="#module-multi_med_image_ml.MultiInputTester" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">MultiInputTester</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_record_folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'experiment_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ProtocolNameSimplified'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_not_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_inds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0,</span> <span class="pre">1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_patients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis_opts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'images'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Used for testing the outputs of MultiInputModule.</p>
+<p>MultiInputTester abstracts many of the functions for testing DL models, including grad cam and group AUC outputs.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.database">
+<span class="sig-name descname"><span class="pre">database</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.database" title="Permalink to this definition">¶</a></dt>
+<dd><p>Associated database for testing</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper" title="multi_med_image_ml.DataBaseWrapper.DataBaseWrapper">DataBaseWrapper</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model to be tested</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#multi_med_image_ml.models.MultiInputModule" title="multi_med_image_ml.models.MultiInputModule">MultiInputModule</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.out_record_folder">
+<span class="sig-name descname"><span class="pre">out_record_folder</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.out_record_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Folder to output results (default None)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.checkpoint_dir">
+<span class="sig-name descname"><span class="pre">checkpoint_dir</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.checkpoint_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Folder that has model checkpoints (default none)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of the model to be tested (default ‘experiment_name’)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.test_name">
+<span class="sig-name descname"><span class="pre">test_name</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.test_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the experiment (default “”)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.database_key">
+<span class="sig-name descname"><span class="pre">database_key</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.database_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Variable used when grouping data together for AUROC analysis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.min_pids">
+<span class="sig-name descname"><span class="pre">min_pids</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.min_pids" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default 1)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.top_not_mean">
+<span class="sig-name descname"><span class="pre">top_not_mean</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.top_not_mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given multiple AUC output files, this will select one randomly instead of coming up with the mean prediction of all of them</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.include_inds">
+<span class="sig-name descname"><span class="pre">include_inds</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.include_inds" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default [0,1])</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.same_patients">
+<span class="sig-name descname"><span class="pre">same_patients</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.same_patients" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true, only plots AUC/Accuracy for patients that are equally divided between groups (default False)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.x_axis_opts">
+<span class="sig-name descname"><span class="pre">x_axis_opts</span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.x_axis_opts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether the X axis of the plot should be “images”, “patients”, or “images_per_patient” (default: “images”)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam">
+<span class="sig-name descname"><span class="pre">grad_cam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_symlink</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">7</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Outputs a gradient class activation map for the input record</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pr</strong> (<a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><em>BatchRecord</em></a>) – Image batch to apply Grad-Cam to</p></li>
+<li><p><strong>add_symlink</strong> (<em>bool</em>) – If true, adds a symbolic link to the original image in the same folder as the grad-cam is stored in (default True)</p></li>
+<li><p><strong>grad_layer</strong> (<em>int</em>) – (default 7)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.loop">
+<span class="sig-name descname"><span class="pre">loop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tests one input and saves it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pr</strong> (<a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><em>BatchRecord</em></a>) – Image batch</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.read_json">
+<span class="sig-name descname"><span class="pre">read_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads all json files output by MultiInputTester.</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="module-multi_med_image_ml.MultiInputTrainer">
 <span id="multi-med-image-ml-multiinputtrainer-module"></span><h2>multi_med_image_ml.MultiInputTrainer module<a class="headerlink" href="#module-multi_med_image_ml.MultiInputTrainer" title="Permalink to this heading">¶</a></h2>
@@ -2906,7 +3083,28 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.key_to_filename_default"><code class="docutils literal notranslate"><span class="pre">key_to_filename_default()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#multi-med-image-ml-multiinputtester-module">multi_med_image_ml.MultiInputTester module</a></li>
+<li><a class="reference internal" href="#module-multi_med_image_ml.MultiInputTester">multi_med_image_ml.MultiInputTester module</a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester"><code class="docutils literal notranslate"><span class="pre">MultiInputTester</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.database"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.database</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.model"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.model</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.out_record_folder"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.out_record_folder</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.checkpoint_dir"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.checkpoint_dir</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.name"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.name</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.test_name"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.test_name</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.database_key"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.database_key</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.min_pids"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.min_pids</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.top_not_mean"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.top_not_mean</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.include_inds"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.include_inds</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.same_patients"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.same_patients</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.x_axis_opts"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.x_axis_opts</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.grad_cam()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.loop()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.plot()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.read_json()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><a class="reference internal" href="#module-multi_med_image_ml.MultiInputTrainer">multi_med_image_ml.MultiInputTrainer module</a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer"><code class="docutils literal notranslate"><span class="pre">MultiInputTrainer</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer.model"><code class="docutils literal notranslate"><span class="pre">MultiInputTrainer.model</span></code></a></li>
