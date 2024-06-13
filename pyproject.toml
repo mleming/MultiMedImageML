@@ -2,7 +2,7 @@
 
 name = "multi_med_image_ml"
 
-version = "0.0.20"
+version = "0.0.21"
 
 dependencies = [
   "numpy>=1.22.0",
@@ -21,7 +21,6 @@ dependencies = [
   "pydicom>=2.4.4",
   "dcm2niix",
   "platformdirs",
-  "grad-cam",
   "requests>=2.28.1",
   "gdown>=4.4.0"
 ]

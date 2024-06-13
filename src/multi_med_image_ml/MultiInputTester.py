@@ -1,31 +1,131 @@
 import torch,os
 from torch import nn
+from pathlib import Path
 import numpy as np
+import pandas as pd
+import json
 from .Records import BatchRecord
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-from pytorch_grad_cam import GradCAMPlusPlus,GradCAM 
+#from pytorch_grad_cam import GradCAMPlusPlus,GradCAM
+from sklearn.metrics import auc,roc_curve
+import glob
+import warnings
+from .utils import resize_np
 
 # Tests either the model directly or the output files
 class MultiInputTester():
-	def __init__(self,model=None,name=None,out_record_folder=None):
+	"""Used for testing the outputs of MultiInputModule
+	
+	"""
+	def __init__(self,database,
+		model=None,
+		out_record_folder=None,
+		checkpoint_dir = None,
+		verbose = False,
+		name = 'experiment_name',
+		test_name="",
+		database_key="ProtocolNameSimplified",
+		min_pids=1,
+		top_not_mean=False,
+		include_inds=[0,1],
+		same_patients=False):
+		self.name=name
+		self.checkpoint_dir=checkpoint_dir
 		self.model = model
+		self.model_file = os.path.join(
+			self.checkpoint_dir,'%s.pt' % self.name)
+		if os.path.isfile(self.model_file):
+			state_dicts = torch.load(self.model_file)
+			self.model.load_state_dict(state_dicts['model_state_dict'])
 		self.model.eval()
 		self.out_record_folder = out_record_folder
+		os.makedirs(self.out_record_folder,exist_ok=True)
 		self.name = name
-		if out_record_folder is not None and name is not None:
-			self.stats_record = StatsRecord(self.out_record_folder,self.name)
+		self.test_name = test_name
+		if self.out_record_folder is not None and self.name is not None:
+			self.stats_record = StatsRecord(
+				os.path.join(self.out_record_folder,"json"),
+				self.name,
+				test_name=self.test_name)
 		self.pid_records = None
-	def test(self,pr: BatchRecord):
+		self.use_auc=True
+		self.remove_inds = []
+		self.include_cbar = True
+		self.mv_limit = 0.5
+		self.x_axis_opts = "images" # images, patients, or images_per_patient
+		self.x_file_pid = False
+		self.database = database
+		self.min_pids = min_pids
+		self.top_not_mean = top_not_mean
+		if not isinstance(self.database,pd.DataFrame):
+			self.database = self.database.database
+		self.database_key = database_key
+		self.include_inds = include_inds
+		self.same_patients = same_patients
+		self.verbose = verbose
+	def plot(self):
+		os.makedirs(os.path.join(self.out_record_folder,"plots"),exist_ok=True)
+		self.pid_records.plot(os.path.join(
+			self.out_record_folder,"plots","temp.png"))
+	def loop(self,pr: BatchRecord):
+		y_pred = self.model(pr,
+			return_regress = True
+			)
+		if isinstance(y_pred,tuple):
+			y_pred,c_pred = y_pred
+		else:
+			c_pred = torch.Tensor(np.zeros(y_pred.shape))
+		if pr.batch_by_pid:
+			self.stats_record.update(
+				pr.get_Y(),
+				y_pred,
+				pr.get_C(),
+				c_pred,
+				pr.pid,
+				pr.get_X_files(),
+				age_encode = self.model.encode_age,
+				static_inputs = [] if self.model.static_dropout \
+					else pr.get_static_inputs()
+			)
+		else:
+			for i,im in enumerate(pr.image_records):
+				self.stats_record.update(
+					im.get_Y(),
+					y_pred[i,...],
+					im.get_C(),
+					c_pred[i,...],
+					im.get_ID(),
+					im.npy_file,
+					age_encode = self.model.encode_age,
+					static_inputs = [] if self.model.static_dropout \
+					else pr.get_static_inputs()
+				)
 		return
 	def read_json(self):
-		if self.pid_records is None: self.pid_records = AllRecords()
+		if self.pid_records is None:
+			self.pid_records = AllRecords(self.database,
+				x_file_pid = self.x_file_pid,
+				remove_inds = self.remove_inds,
+				database_key = self.database_key,
+				use_auc = self.use_auc,
+				min_pids = self.min_pids,
+				mv_limit = self.mv_limit,
+				top_not_mean = self.top_not_mean,
+				include_inds = self.include_inds,
+				x_axis_opts = self.x_axis_opts,
+				same_patients = self.same_patients,
+				name = self.name,
+				verbose = self.verbose)
+		json_files = glob.glob(os.path.join(self.out_record_folder,"json",
+			"*.json"))
 		for json_file in json_files:
 			try:
-				json_dict = json.load(open(json_file,'r'))
+				with open(json_file,'r') as fileobj:
+					json_dict = json.load(fileobj)
 			except:
-				print("Error in opening %s" % json_file)
+				if self.verbose: print("Error in opening %s" % json_file)
 				continue
 			X_files = []
 			Ys = []
@@ -34,7 +134,7 @@ class MultiInputTester():
 				for mm in range(len(json_dict[pid])):
 					xf = np.array(json_dict[pid][mm]["X_files"]).flatten()
 					yf = np.array(json_dict[pid][mm]["Y"])#.flatten()
-					for i in remove_inds:
+					for i in self.remove_inds:
 						#print(yf)
 						if np.any(yf[i,:] == 1):
 							#print(xf)
@@ -49,37 +149,70 @@ class MultiInputTester():
 						static_inputs = json_dict[pid][mm]["static_inputs"]
 					else:
 						static_inputs = []
-					pid_records.add_record(pid,xf,yf,ypf,title_parse(json_file),
+					self.pid_records.add_record(pid,
+						xf,yf,ypf,self._json_title_parse(json_file),
 						age_encode=age_encode,static_inputs=static_inputs)
-
+		if self.same_patients:
+			self.pid_records.merge_modality_pids()
+	def _json_title_parse(self,json_file):
+		return "_".join(
+				os.path.basename(json_file).replace('.json','').split("_")[:-1]
+			)
+	def test_grad_cam(self,pr: BatchRecord, add_symlink: bool = True):
 		
-	def test_grad_cam(self,pr: BatchRecord):
-		target_layers = []
-		for name, module in self.model.named_modules():
-			if not name.startswith('params'):
-				if name == 'encoder.encoder.1':# or name == 'encoder.encoder.1':
-					target_layers.append(module)
-		self.model.regressor_freeze()
-		G = GradCAMPlusPlus(model=self.model,target_layers=target_layers)
-		t = G(input_tensor = pr.get_X(), targets = None)
-		for i in range(t.shape[0]):
-			nn = np.squeeze(t[i,...])
-			out_name = os.path.join(
-				self.output_folder,"%s_%s.npy" % (self.model,
-					os.path.splitext(os.path.basename(args.images[i]))[0]))
-			ind = args.images[i]
-			np.save(out_name,nn)
-			mod = database.loc[ind,"ProtocolNameSimplified"]
-			mod = "None" if mod is None else mod
-			title = "{mod:s}".format(mod = mod)
-			command_str = "image_slices_viewer.py {image_name:s} {out_name:s} --title={title:s} --rg &".format(title=title,out_name=out_name,image_name=args.images[i])
-			#print(command_str)
+		if pr.image_records[0].Y_dim[0] > 1:
+			raise Exception(
+				("Grad Cam cannot be applied to" + \
+				" multilabel models (Y_dim: %s)") % str(pr.Y_dim))
 
+		Y = pr.get_Y()
+		y_pred = self.model(pr.get_X(),grad_eval=True)
+		
+		ymax = Y.argmax(dim=2)
+
+		y_pred[:,:,ymax].backward()
+		
+		gradients = self.model.get_activations_gradient()
+		
+		# pool the gradients across the channels
+		pooled_gradients = torch.mean(gradients, dim=[2, 3, 4])
+		
+		# get the activations of the last convolutional layer
+		activations = self.model.get_activations(pr.get_X()).detach()
+		
+		# weight the channels by corresponding gradients
+		for j in range(activations.size()[0]):
+			for i in range(activations.size()[1]):
+			    activations[j, i, :, :, :] *= pooled_gradients[j,i]
+		
+		# average the channels of the activations
+		heatmap = torch.mean(activations, dim=1)
+		
+		# relu on top of the heatmap
+		# expression (2) in https://arxiv.org/pdf/1610.02391.pdf
+		
+		t = heatmap.detach().numpy()
+		for i in range(t.shape[0]):
+			im = pr.image_records[i]
+			
+			npsqueeze = np.squeeze(t[i,...])
+			npsqueeze = resize_np(npsqueeze,im.X_dim)
+			out_folder = os.path.join(self.out_record_folder,
+							"grads",im.group_by)
+			os.makedirs(out_folder,exist_ok=True)
+			bname = os.path.splitext(os.path.basename(im.npy_file))[0]
+			out_name = f"{bname}_grad.npy"
+			orig_name = f"{bname}_orig.npy"
+			np.save(os.path.join(out_folder,out_name),npsqueeze)
+			if add_symlink:
+				os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
 		
 class StatsRecord():
 	def __init__(self,out_record_folder,name,test_name=""):
 		self.test_name=test_name
-		self.name = self.get_name(out_record_folder,name,self.test_name)
+		self.out_record_folder = out_record_folder
+		os.makedirs(out_record_folder,exist_ok=True)
+		self.name = self.get_name(self.out_record_folder,name,self.test_name)
 		self.x_files_read = set()
 		self.pids_read = set()
 		self.all_acc = None
@@ -92,10 +225,7 @@ class StatsRecord():
 		self.out_conf_record = {}
 		self.all_IDs = None
 	def get_name(self,out_record_folder,name,test_name):
-		
 		if self.test_name != "":
-			#return  os.path.join(out_record_folder,
-			#			"%s_%s.json" % (name,self.test_name))
 			n,ext = os.path.splitext(name)
 			name = n + "_" + self.test_name + ext
 		num = 0
@@ -105,21 +235,21 @@ class StatsRecord():
 			num += 1
 		Path(os.path.join(out_record_folder,"%s_%d.json" % (name,num))).touch()
 		return "%s_%d" % (name,num)
-	def update(self,Y,y_pred,C,c_pred,IDs,X_files,age_encode=False,static_inputs=[]):
+	def update(self,Y,y_pred,C,c_pred,ID,X_files,age_encode=False,static_inputs=[]):
+		if torch.is_tensor(Y): Y = Y.detach().numpy()
+		if torch.is_tensor(y_pred): y_pred = y_pred.detach().numpy()
+		if torch.is_tensor(C): C = C.detach().numpy()
+		if torch.is_tensor(c_pred): c_pred = c_pred.detach().numpy()
+		
 		self.x_files_read = self.x_files_read.union(set(X_files))
-		self.pids_read = self.pids_read.union(set(IDs))
+		self.pids_read.add(ID)
 
-		#if len(Y.shape) < 2:
-		#	Y = np.expand_dims(Y,axis=0)
 		if len(Y.shape) == 2:
 			Y = np.expand_dims(Y,axis=1)
-		#if len(y_pred.shape) < 2:
-		#	y_pred = np.expand_dims(y_pred,axis=0)
 		if len(y_pred.shape) == 2:
 			y_pred = np.expand_dims(y_pred,axis=1)
 		assert(len(Y.shape) == 3)
 		assert(len(y_pred.shape) == 3)
-		
 		if self.all_Y is None: self.all_Y = Y
 		else: self.all_Y = np.concatenate((self.all_Y,Y),axis=0)
 		if self.all_y_pred is None: self.all_y_pred = y_pred
@@ -129,18 +259,14 @@ class StatsRecord():
 		if self.all_c_pred is None: self.all_c_pred = c_pred
 		else:
 			self.all_c_pred = np.concatenate((self.all_c_pred,c_pred),axis=0)
-		#acc = get_multilabel_acc(y_pred,pr.Y)
-		if self.all_IDs is None: all_IDs = IDs
-		else: self.all_IDs = np.concatenate((self.all_IDs,IDs),axis=0)
-		if IDs[0] not in self.out_record:
-			self.out_record[IDs[0]] = []
-		
-		#print(Y)
-		#print(Y.shape)
-		#print(y_pred)
-		#print(y_pred.shape)
+		if self.all_IDs is None:
+			self.all_IDs = set([ID])
+		else:
+			self.all_IDs.add(ID)
+		if ID not in self.out_record:
+			self.out_record[ID] = []
 		if len(Y.shape) == 2:
-			self.out_record[IDs[0]].append({
+			self.out_record[ID].append({
 							'X_files' : [str(_) for _ in X_files],
 							'Y' : [float(_) for _ in list(Y[0])],
 							'y_pred' : [float(_) for _ in list(y_pred[0])],
@@ -148,7 +274,7 @@ class StatsRecord():
 							'static_inputs' : [str(_) for _ in list(static_inputs)]
 							})
 		else:
-			self.out_record[IDs[0]].append({
+			self.out_record[ID].append({
 							'X_files' : [str(_) for _ in X_files],
 							'Y' : [[float(Y[:,i,j]) for i in range(y_pred.shape[1]) ] for j in range(Y.shape[2])],
 							'y_pred' : [[float(y_pred[:,i,j]) for i in range(y_pred.shape[1]) ] for j in range(y_pred.shape[2])],
@@ -168,49 +294,70 @@ class StatsRecord():
 			if True:
 				cc = []
 				for k in range(min(self.all_Y.shape[2],self.all_y_pred.shape[2])):
-					fpr, tpr, thresholds = roc_curve(self.all_Y[:,j,k], self.all_y_pred[:,j,k])
-					cc.append(auc(fpr,tpr))
+					with warnings.catch_warnings():
+						warnings.simplefilter("ignore")
+						fpr, tpr, thresholds = roc_curve(
+											self.all_Y[:,j,k],
+											self.all_y_pred[:,j,k])
+						cc.append(auc(fpr,tpr))
 				self.all_auroc.append(cc)
 			else:
-				print("Mismatched shape")
-				print("all_Y.shape: %s"%str(all_Y.shape))
-				print("all_y_pred.shape: %s"%str(all_y_pred.shape))
-				exit()
+				if self.verbose:
+					print("Mismatched shape")
+					print("all_Y.shape: %s"%str(all_Y.shape))
+					print("all_y_pred.shape: %s"%str(all_y_pred.shape))
 		for j in range(min(self.all_C.shape[1],self.all_c_pred.shape[1])):
 			cc = []
 			for k in range(min(self.all_C.shape[2],self.all_c_pred.shape[2])):
-				fpr, tpr, thresholds = roc_curve(self.all_C[:,j,k], self.all_c_pred[:,j,k])
-				cc.append(auc(fpr,tpr))
+				with warnings.catch_warnings():
+					warnings.simplefilter("ignore")
+					fpr, tpr, thresholds = roc_curve(
+									self.all_C[:,j,k],
+									self.all_c_pred[:,j,k])
+					cc.append(auc(fpr,tpr))
 			self.all_c_auroc.append(cc)
-
 	def record(self):
-		self.out_record_file = os.path.join(out_record_folder,"%s.json" % self.name)
-		self.out_record_file_txt=os.path.join(out_record_folder,'%s.txt' % self.name)
-		self.out_conf_record_file = os.path.join(out_record_folder,"%s_conf.json" % self.name)
-		self.out_conf_record_file_txt = os.path.join(out_record_folder,"%s_conf.txt" % self.name)
+		self.out_record_file = os.path.join(
+			self.out_record_folder,"%s.json" % self.name)
+		self.out_record_file_txt=os.path.join(
+			self.out_record_folder,"%s.txt" % self.name)
+		self.out_conf_record_file = os.path.join(
+			self.out_record_folder,"%s_conf.json" % self.name)
+		self.out_conf_record_file_txt = os.path.join(
+			self.out_record_folder,"%s_conf.txt" % self.name)
 		if self.all_Y is None:
 			print("Nothing to record")
 			return
 		self.output_auc()
-		json.dump(self.out_record,open(self.out_record_file,'w'),indent=4)
+		with open(self.out_record_file,'w') as fileobj:
+			json.dump(self.out_record,fileobj,indent=4)
 		with open(self.out_record_file_txt,'w') as fileobj:
-			fileobj.write( "%d: %s - # files: %d; num patients: %d; %s; %s" % \
-				(i,self.name,len(self.x_files_read),len(self.pids_read),
+			fileobj.write( "%s - # files: %d; num patients: %d; %s; %s" % \
+				(self.name,len(self.x_files_read),len(self.pids_read),
 					str(self.all_auroc),str(self.all_c_auroc)))
-
 		#json.dump(self.out_conf_record,open(self.out_conf_record_file,'w'),
 		#	indent=4)
 		with open(self.out_conf_record_file_txt,'w') as fileobj:
 			for a in self.all_c_auroc:
 				fileobj.write(str(a)+"\n")
 
-
 class FileRecord:
-	def __init__(self,X_files,Y,y_pred,modality="",
-			age_encode=False,static_inputs=[]):
+	def __init__(self,X_files,
+				Y,
+				y_pred,
+				database,
+				modality="",
+				age_encode=False,
+				static_inputs=[],
+				remove_inds=[],
+				c="name_mod",
+				database_key="ProtocolNameSimplified"):
 		self.X_files = sorted(X_files)
 		self.Y = Y
 		self.y_pred = y_pred
+		self.c=c
+		self.database=database
+		self.database_key=database_key
 		for i in remove_inds:
 			self.y_pred[i] = 0
 		self.age_encode = age_encode
@@ -218,22 +365,22 @@ class FileRecord:
 		if modality != "":
 			self.modality = modality
 		# ProtocolNameSimplified, MRModality, Modality
-		if args.c == "name_num":
+		if self.c == "name_num":
 			self.filetypes_name = self.get_filetypes_name_num()
-		elif args.c == "diff_date":
+		elif self.c == "diff_date":
 			self.filetypes_name = self.get_filetypes_diff_date()
-		elif args.c == "name_mod":
+		elif self.c == "name_mod":
 			self.filetypes_name = self.get_filetypes_name_modality() #self.modality
-		elif args.c == "age_dem":
+		elif self.c == "age_dem":
 			self.filetypes_name = ("Age" if age_encode else "") + " " +("Demo" if len(static_inputs) > 0 else "")
 			if self.filetypes_name == " ": self.filetypes_name = "Only images"
 		else:
-			raise Exception("Invalid argument for args.c: %s" % args.c)
+			raise Exception("Invalid argument for self.c: %s" % self.c)
 		#self.filetypes_name = " "
 	def get_filetypes_diff_date(self):
 		if len(self.X_files) == 1:
 			return None # "One Image"
-		self.dates = [database.loc[X_file,'ExamEndDTS'] for X_file in self.X_files]
+		self.dates = [self.database.loc[X_file,'ExamEndDTS'] for X_file in self.X_files]
 		self.dates = list(filter(lambda k: k is not None,self.dates))
 		self.dates = [_.split(":")[0].replace("_","-") for _ in self.dates]
 		self.dates = [dateutil.parser.parse(_) for _ in self.dates]
@@ -242,8 +389,7 @@ class FileRecord:
 		divides = [5]
 		ret = self.get_divides(date_diff,divides)
 		ret = ret + (" encoded" if self.age_encode else "")
-		return ret
-	
+		return ret	
 	def get_filetypes_name_num(self):
 		divides = [1,5,10,14]
 		return self.get_divides(len(self.X_files),divides)
@@ -257,9 +403,8 @@ class FileRecord:
 					return "%d"%s2
 				return "%d-%d" %(s1+1,s2)
 		return "%s+" % divides[-1]
-
 	def get_filetypes_name_num_modality(self):
-		self.filetypes = [database.loc[_,database_key] \
+		self.filetypes = [self.database.loc[_,self.database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
@@ -267,7 +412,7 @@ class FileRecord:
 		self.filetypes = set(self.filetypes)
 		return  str(len(self.filetypes))
 	def get_filetypes_name_modality(self):
-		self.filetypes = [database.loc[_,database_key] \
+		self.filetypes = [self.database.loc[_,self.database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
@@ -275,7 +420,7 @@ class FileRecord:
 		self.filetypes = set(self.filetypes)
 		return  "_".join(sorted(list(self.filetypes)))
 	def get_filetypes_name_modality_num(self):
-		self.filetypes = [database.loc[_,database_key] \
+		self.filetypes = [self.database.loc[_,self.database_key] \
 			for _ in self.X_files]
 		for i,f in enumerate(self.filetypes):
 			if f is None: self.filetypes[i] = "None"
@@ -295,19 +440,36 @@ class FileRecord:
 		print("-")
 
 class PIDRecord:
-	def __init__(self,pid):
+	def __init__(self,
+			pid,
+			database,
+			remove_inds=[],
+			database_key="ProtocolNameSimplified",
+			top_not_mean=False):
+		self.remove_inds=remove_inds
 		self.pid = pid
 		self.file_records = {}
-	def add_file_record(self,X_files,Y,y_pred,modality,
-			age_encode=False,static_inputs=[]):
-		f = FileRecord(X_files,Y,y_pred,modality,age_encode=age_encode,
-			static_inputs=static_inputs)
-		if record_key == "filetypes":
-			key = f.filetypes_name
-		elif record_key == "modality":
-			key = f.modality
-		else:
-			raise Exception("Invalid record key: %s" % key)
+		self.database = database
+		self.database_key = database_key
+		self.top_not_mean=top_not_mean
+	def add_file_record(self,
+			X_files,
+			Y,
+			y_pred,
+			modality,
+			age_encode=False,
+			static_inputs=[]):
+		f = FileRecord(
+				X_files,
+				Y,
+				y_pred,
+				self.database,
+				modality = modality,
+				age_encode = age_encode,
+				static_inputs = static_inputs,
+				remove_inds = self.remove_inds,
+				database_key = self.database_key)
+		key = f.filetypes_name
 		if key is None: return None
 		if key not in self.file_records:
 			self.file_records[key] = []
@@ -326,7 +488,8 @@ class PIDRecord:
 				Ys.append(fr.Y)
 				yps.append(fr.y_pred)
 				for X_file in fr.X_files: X_file_set.add(X_file)
-				if top_not_mean: break
+				if self.top_not_mean:
+					break
 		Ys = np.array(Ys)
 		yps = np.array(yps)
 		Ys = np.mean(Ys,axis=0)
@@ -372,17 +535,48 @@ class PIDRecord:
 				file_record.print_record(indent=4)
 
 class AllRecords:
-	def __init__(self):
+	def __init__(self,database,
+			x_file_pid = False,
+			remove_inds=[],
+			database_key="ProtocolNameSimplified",
+			use_auc=True,
+			include_cbar=False,
+			min_pids=20,
+			mv_limit=0.5,
+			top_not_mean=False,
+			include_inds=[0,1],
+			x_axis_opts="images",
+			same_patients=False,
+			name="experiment_name",
+			verbose=False):
+		self.use_auc=use_auc
 		self.pid_records = {}
 		self.modality_pid_sets = {} # Sets of patients who have a certain modality
 		self.modality_set = set()
+		self.x_file_pid = x_file_pid
+		self.remove_inds = remove_inds
+		self.database = database
+		self.database_key = database_key
+		self.include_cbar = include_cbar
+		self.min_pids = min_pids
+		self.mv_limit = mv_limit
+		self.top_not_mean = top_not_mean
+		self.include_inds = include_inds
+		self.x_axis_opts = x_axis_opts
+		self.same_patients = same_patients
+		self.name=name
+		self.verbose=verbose
 	def add_record(self,pid,X_files,Y,y_pred,modality,
 			age_encode=False,
 			static_inputs=[]):
-		if x_file_pid:
+		if self.x_file_pid:
 			pid = pid + ",".join(X_files)
 		if pid not in self.pid_records:
-			self.pid_records[pid] = PIDRecord(pid)
+			self.pid_records[pid] = PIDRecord(pid,
+					self.database,
+					remove_inds=self.remove_inds,
+					database_key=self.database_key,
+					top_not_mean=self.top_not_mean)
 		
 		key = self.pid_records[pid].add_file_record(X_files,Y,y_pred,modality,
 			age_encode=age_encode,static_inputs=static_inputs)
@@ -393,17 +587,17 @@ class AllRecords:
 			self.modality_pid_sets[key].add(pid)
 	# Makes it so that this only outputs records of the same set of patients for
 	# all considered modalities
-	def merge_modality_pids(self,min_pids = -1):
+	def merge_modality_pids(self):
 		pid_set = set(self.pid_records)
-		if min_pids > len(pid_set):
+		if self.min_pids > len(pid_set):
 			raise Exception("Min pids is %d, but total pids is %d" % \
-				(min_pids,len(pid_set)))
+				(self.min_pids,len(pid_set)))
 		exclude_modalities = set()
 		lenlist = sorted([(len(self.modality_pid_sets[m]),m)\
 			 for m in self.modality_set],reverse=True)
 		for l,m in lenlist:
 			temp = pid_set.intersection(self.modality_pid_sets[m])
-			if len(temp) < min_pids and min_pids > -1:
+			if len(temp) < self.min_pids and self.min_pids > -1:
 				exclude_modalities.add(m)
 			else:
 				pid_set = temp
@@ -430,29 +624,33 @@ class AllRecords:
 			Ys = np.expand_dims(Ys,axis=0)
 			y_preds = np.expand_dims(y_preds,axis=0)
 		#for i in range(Ys.shape[1]):
-		Ys = Ys[:,include_inds]
-		y_preds = y_preds[:,include_inds]
-		print("---")
-		print("Ys.shape: %s" %  str(Ys.shape))
-		print("y_preds.shape: %s" %  str(y_preds.shape))
+		Ys = Ys[:,self.include_inds]
+		y_preds = y_preds[:,self.include_inds]
+		if self.verbose:
+			print("---")
+			print("Ys.shape: %s" %  str(Ys.shape))
+			print("y_preds.shape: %s" %  str(y_preds.shape))
 		selection = np.any(Ys == 1,axis=1)
-		Ys = Ys[selection,:]
-		y_preds = y_preds[selection,:]
-		print("Ys.shape: %s" %  str(Ys.shape))
-		print("y_preds.shape: %s" %  str(y_preds.shape))
+		if self.verbose:
+			Ys = Ys[selection,:]
+			y_preds = y_preds[selection,:]
+			print("Ys.shape: %s" %  str(Ys.shape))
+			print("y_preds.shape: %s" %  str(y_preds.shape))
 
 		tot_n_patients = Ys.shape[0]
-		print("tot_n_patients: %d" % tot_n_patients)
+		if self.verbose:
+			print("tot_n_patients: %d" % tot_n_patients)
 		if tot_n_patients == 0: return -1
 		mean_auc = 0
 		c = 0
 		if len(Ys.shape) < 2: return -1
-		for i in range(Ys.shape[1]):# include_inds:# range(Ys.shape[1]):
+		for i in range(Ys.shape[1]):# self.include_inds:# range(Ys.shape[1]):
 			with warnings.catch_warnings():
 				warnings.simplefilter("ignore")
 				fpr, tpr, thresholds = roc_curve(Ys[:,i], y_preds[:,i])
 				auc_ = auc(fpr,tpr)
-				print("{i:d}: {auc:.4f}".format(i=i,auc=auc_))
+				if self.verbose:
+					print("{i:d}: {auc:.4f}".format(i=i,auc=auc_))
 				mean_auc += auc_
 				c += 1
 		if c == 0: return -1
@@ -484,30 +682,16 @@ class AllRecords:
 		#for i in range(Ys.shape[1]):
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
-			print("---")
-			print("Ys")
-			print(Ys.shape)
-			print(y_preds.shape)
-			print("Include")
-			Ys = Ys[:,include_inds]
-			y_preds = y_preds[:,include_inds]
+			Ys = Ys[:,self.include_inds]
+			y_preds = y_preds[:,self.include_inds]
 			selection = np.any(Ys == 1,axis=1)
 			Ys = Ys[selection,:]
 			y_preds = y_preds[selection,:]
 			tot_n_patients = Ys.shape[0]
-			print(Ys.shape)
-			print(y_preds.shape)
-			print("Argmax")
 			am_Ys = np.argmax(Ys,axis=1)
 			am_y_preds = np.argmax(y_preds,axis=1)
-			print(am_Ys.shape)
-			print(am_y_preds.shape)
-			print("Equals")
 			equals = am_Ys == am_y_preds
-			print(equals.shape)
-			print("Acc")
 			mean_acc += np.mean(equals)
-			print(mean_acc)
 		return mean_acc,tot_n_patients,n_images_total,np.mean(Ys[:,0])
 
 	def greatest_modality_difference(self):
@@ -526,41 +710,40 @@ class AllRecords:
 		for m,t in tuples:
 			for f in t.file_records:
 				if t.file_records[f][0].Y[1] == 3:
-					print("Motorized seesaw")
 					return t
 		return t
 		#t = tuples[int(len(tuples) * 0.86)]
 		#print(t)
 		#return t[1]
-	def plot(self,output=None):
+	def plot(self,output=None,title=""):
 		X = []
 		Y = []
 		L = []
 		C = []
 		num_skips = 0
 		for l in self.modality_set:
-			if use_auc:
-				val = self.get_modality_auc(l,mv_limit=mv_limit)
+			if self.use_auc:
+				val = self.get_modality_auc(l,mv_limit=self.mv_limit)
 			else:
-				val = self.get_modality_acc(l,mv_limit=mv_limit)
+				val = self.get_modality_acc(l,mv_limit=self.mv_limit)
 			if val == -1:
 				#print("Skipping %s" % l)
 				continue
 			x,n_patients,n_images,portion = val
-			if n_patients < min_pids and min_pids > -1:
+			if n_patients < self.min_pids and self.min_pids > -1:
 				num_skips += 1
 				continue
 			L.append(l)
 			X.append(x)
 			C.append(portion)
-			if x_axis_opts == "images":
+			if self.x_axis_opts == "images":
 				Y.append(n_images)
 				xlabel = "Num Images" + (" (%d total patients)" % n_patients) \
-					if same_patients else ""
-			elif x_axis_opts == "patients":
+					if self.same_patients else ""
+			elif self.x_axis_opts == "patients":
 				Y.append(n_patients)
 				xlabel = "Num Patients"
-			elif x_axis_opts == "images_per_patient":
+			elif self.x_axis_opts == "images_per_patient":
 				Y.append(float(n_images)/n_patients)
 				xlabel = "Mean images per patient"
 			else:
@@ -568,28 +751,30 @@ class AllRecords:
 		if num_skips == len(self.modality_set):
 			raise Exception(
 				"Not enough patients in any one group with %d minimum PIDs" % \
-					min_pids)
+					self.min_pids)
 		for x,y,l,c in zip(X,Y,L,C):
 			if np.isnan(x): continue
-			print("{l:s}: {x:.4f} {y:.4f}".format(c=c,y=y,l=l,x=x))
+			if self.verbose:
+				print("{l:s}: {x:.4f} {y:.4f}".format(c=c,y=y,l=l,x=x))
 			#plt.scatter(y,x,c=c,cmap=plt.cm.viridis)
 			plt.text(y,x,l[:10])#.replace("_","\n"),rotation=0)
-		if include_cbar:
+		if self.include_cbar:
 			sc = plt.scatter(np.array(Y),np.array(X),c=np.array(C),
 				cmap=plt.cm.viridis,vmin=0,vmax=1)
 			plt.colorbar(sc,label=cbar_label)
 		else:
 			plt.scatter(np.array(Y),np.array(X))
 		plt.title(title)
-		if use_auc:
+		if self.use_auc:
 			plt.ylabel("AUC")
 		else:
 			plt.ylabel("Accuracy")
 		try:
-			plt.xlabel(xlabel)
+			plt.xlabel(self.xlabel)
 		except:
-			print("No data in %s" % args.name)
-			exit()
+			pass
+			#print("No data in %s" % self.name)
+			#exit()
 		if output is None:
 			plt.show()
 		else:

@@ -72,6 +72,9 @@ class Record:
 		self.exam_date = self.database.get_exam_date(self.npy_file)
 		self.group_by = self.database.get_ID(self.npy_file)
 		self.loaded = True
+	def get_ID(self):
+		if self.group_by is None: self.load_extra_info()
+		return self.group_by
 	def get_static_inputs(self):
 		"""Loads in static inputs from the database"""
 		if self.static_input_res is None:
@@ -278,6 +281,8 @@ class ImageRecord(Record):
 		if augment and self.dtype == "torch":
 			return generate_transforms(self.X)
 		else: return self.X
+	def get_X_files(self):
+		return self.npy_file
 	def _get_Y(self):
 		"""Returns label"""
 		
@@ -431,6 +436,9 @@ class BatchRecord():
 			elif callback == "static_inputs":
 				X = im.get_static_inputs()
 				no_arr = True
+			elif callback == "X_files":
+				X = im.get_X_files()
+				no_arr = True
 			else:
 				raise Exception("Invalid callback")
 			if no_arr:
@@ -454,6 +462,8 @@ class BatchRecord():
 			return Xs #.astype(np.float32)
 		else:
 			raise Exception("Invalid dtype: %s" % self.dtype)
+	def get_X_files(self):
+		return self._get("X_files")
 	def get_X(self,augment=False):
 		return self._get("X",augment=augment)
 	def get_Y(self):

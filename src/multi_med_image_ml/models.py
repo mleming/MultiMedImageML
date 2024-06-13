@@ -74,7 +74,6 @@ class Encoder(nn.Module):
 			nn.Linear(in_features = base_feat*32, out_features = base_feat*16),
 			nn.LeakyReLU(),
 			nn.Linear(in_features = base_feat*16, out_features = latent_dim),
-			
 		)
 	def parameters(self):
 		return self.encoder.parameters()
@@ -250,7 +249,8 @@ class MultiInputModule(nn.Module):
 				remove_uncertain: bool = False,
 				device = torch.device('cpu'),
 				latent_dim: int = 128,
-				weights: str = None):
+				weights: str = None,
+				grad_layer: int = 7):
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters
@@ -277,6 +277,7 @@ class MultiInputModule(nn.Module):
 		self.C_dim = C_dim
 		self.zero_input = zero_input
 		self.remove_uncertain = remove_uncertain
+		self.grad_layer = grad_layer
 
 		# Under development
 		if self.remove_uncertain:
@@ -344,7 +345,22 @@ class MultiInputModule(nn.Module):
 				self.load_state_dict(torch.load(weights))
 			else:
 				self.load_state_dict(torch.load(download_weights(weights)))
-				
+		
+		# Placeholder for gradients for Grad-CAM analysis
+		self.gradients = None
+		
+	# hook for the gradients of the activations
+	def activations_hook(self, grad):
+		self.gradients = grad
+	
+	# method for the gradient extraction
+	def get_activations_gradient(self):
+		return self.gradients
+	
+	# method for the activation extraction
+	def get_activations(self, x):
+		return self.encoder.encoder[:self.grad_layer](x)
+	
 	def load_state_dict(self,state_dict,*args, **kwargs):
 		if self.regressor is not None:
 			self.regressor.load_state_dict(state_dict['regressor'])
@@ -408,7 +424,8 @@ class MultiInputModule(nn.Module):
 				bdate=None,
 				return_regress = False,
 				return_encoded = False,
-				encoded_input = False):
+				encoded_input = False,
+				grad_eval = False):
 		"""Puts image or BatchRecord through model and predicts a value.
 		
 		Args:
@@ -426,7 +443,8 @@ class MultiInputModule(nn.Module):
 		use_regression = hasattr(self,'regressor') and \
 			(self.regressor is not None) and \
 			(self.training or return_regress)
-		if not encoded_input:
+		if not encoded_input:				
+				#assert(self.gradients is not None)
 			if isinstance(x,BatchRecord):
 				assert(x.dtype == "torch")
 				if len(x.get_static_inputs()[0]) > 0:
@@ -463,13 +481,23 @@ class MultiInputModule(nn.Module):
 					)
 			# Encode everything - separate batches
 			if self.variational:
-				x = self.encoder(x)
+				if grad_eval:
+					x = self.encoder.encoder[:self.grad_layer](x)
+					h = x.register_hook(self.activations_hook)
+					x = self.encoder.encoder[self.grad_layer:](x)
+				else:
+					x = self.encoder(x)
 				z_mean = self.z_mean(x)
 				z_log_sigma = self.z_log_sigma(x)
 				x = z_mean + (z_log_sigma.exp()*self.epsilon.sample(z_mean.shape))
 				self.kl = (z_mean**2 + z_log_sigma.exp()**2 - z_log_sigma-0.5).mean()
 			else:
-				x = self.encoder(x) # [1-16]*96*96*96 -> [1-16]*512
+				if grad_eval:
+					x = self.encoder.encoder[:self.grad_layer](x)
+					h = x.register_hook(self.activations_hook)
+					x = self.encoder.encoder[self.grad_layer:](x)
+				else:
+					x = self.encoder(x)
 			
 			if hasattr(self,'remove_uncertain'):
 				if self.remove_uncertain:

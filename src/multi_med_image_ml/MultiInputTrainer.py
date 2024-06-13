@@ -122,8 +122,10 @@ class MultiInputTrainer:
 		
 		Loops a BatchRecord through one iteration. Also switches the queues of
 		the MedImageLoader as it switches between optimizers.
+		
 		Args:
-			pr (BatchRecord)
+			pr (multi_med_image_ml.Records.BatchRecord): Record to be evaluated
+			dataloader (multi_med_image_ml.DataBaseWrapper.DataBaseWrapper): Database
 		"""
 		
 		assert(isinstance(pr,BatchRecord))
