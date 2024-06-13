@@ -33,9 +33,9 @@ By default, images are resized to 96x96x96. This may also be changed by specifyi
 Model and Training
 ------------------
 
-.. code-block:: console
-
 The simplest way to train the multi-input module, as other pytorch models are trained, is as follows:
+
+.. code-block:: console
 
   $ from multi_input_med_image_loader.models import *
   $ from src.multi_med_image_ml.MedImageLoader import *
@@ -60,6 +60,8 @@ The simplest way to train the multi-input module, as other pytorch models are tr
   $
 
   The MultiInputTrainer module allows for the confound regression functionalities and generally abstracts that process.
+
+.. code-block:: console
 
   $ from multi_input_med_image_loader.models import *
   $ from src.multi_med_image_ml.MedImageLoader import *
