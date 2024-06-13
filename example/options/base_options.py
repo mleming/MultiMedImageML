@@ -21,7 +21,7 @@ class BaseOptions():
 		self.wd = os.path.dirname(os.path.realpath(__file__))
 		#parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
 		parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
-		parser.add_argument('--dim',nargs=3,help='Dimensions of images',default=[96,96,96])
+		parser.add_argument('--X_dim',nargs=3,help='Dimensions of images',default=[96,96,96])
 		parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 		parser.add_argument('--checkpoint_dir', type=str, default=os.path.join(os.path.dirname(self.wd),'checkpoint'), help='models are saved here')
 		parser.add_argument('--label',default=['AlzStage'],nargs='+',help='Which labels to read in')

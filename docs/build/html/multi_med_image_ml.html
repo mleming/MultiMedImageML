@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="prev" title="multi_med_image_ml" href="modules.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 -->
-        <title>multi_med_image_ml package - Multi-Input Medical Image ML Toolkit 0.0.17 documentation</title>
+        <title>multi_med_image_ml package - Multi-Input Medical Image ML Toolkit 0.0.21 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=387cc868" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
@@ -179,7 +179,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.17 documentation</div></a>
+      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.21 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -203,7 +203,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.17 documentation</span>
+  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.21 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -846,174 +846,8 @@ May take a while.</p>
 <dd></dd></dl>
 
 </section>
-<section id="module-multi_med_image_ml.MultiInputTester">
-<span id="multi-med-image-ml-multiinputtester-module"></span><h2>multi_med_image_ml.MultiInputTester module<a class="headerlink" href="#module-multi_med_image_ml.MultiInputTester" title="Permalink to this heading">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">AllRecords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_file_pid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_inds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ProtocolNameSimplified'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_auc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_cbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mv_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_not_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_inds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0,</span> <span class="pre">1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'images'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_patients</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'experiment_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.add_record">
-<span class="sig-name descname"><span class="pre">add_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modality</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age_encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.add_record" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.get_modality_acc">
-<span class="sig-name descname"><span class="pre">get_modality_acc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">modality</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mv_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.get_modality_acc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.get_modality_auc">
-<span class="sig-name descname"><span class="pre">get_modality_auc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">modality</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mv_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.get_modality_auc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.greatest_modality_difference">
-<span class="sig-name descname"><span class="pre">greatest_modality_difference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.greatest_modality_difference" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.merge_modality_pids">
-<span class="sig-name descname"><span class="pre">merge_modality_pids</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.merge_modality_pids" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.AllRecords.plot">
-<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.AllRecords.plot" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">FileRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age_encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_inds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'name_mod'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ProtocolNameSimplified'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_acc">
-<span class="sig-name descname"><span class="pre">get_acc</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_acc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_divides">
-<span class="sig-name descname"><span class="pre">get_divides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_divides" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_diff_date">
-<span class="sig-name descname"><span class="pre">get_filetypes_diff_date</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_diff_date" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality">
-<span class="sig-name descname"><span class="pre">get_filetypes_name_modality</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality_num">
-<span class="sig-name descname"><span class="pre">get_filetypes_name_modality_num</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality_num" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num">
-<span class="sig-name descname"><span class="pre">get_filetypes_name_num</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num_modality">
-<span class="sig-name descname"><span class="pre">get_filetypes_name_num_modality</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num_modality" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.FileRecord.print_record">
-<span class="sig-name descname"><span class="pre">print_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.FileRecord.print_record" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">MultiInputTester</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_record_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'experiment_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ProtocolNameSimplified'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_not_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_inds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0,</span> <span class="pre">1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_patients</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Used for testing the outputs of MultiInputModule</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.loop">
-<span class="sig-name descname"><span class="pre">loop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.plot">
-<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.read_json">
-<span class="sig-name descname"><span class="pre">read_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.test_grad_cam">
-<span class="sig-name descname"><span class="pre">test_grad_cam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_symlink</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.test_grad_cam" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">PIDRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_inds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ProtocolNameSimplified'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_not_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord.add_file_record">
-<span class="sig-name descname"><span class="pre">add_file_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modality</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age_encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord.add_file_record" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_accuracy">
-<span class="sig-name descname"><span class="pre">get_mean_accuracy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">modality</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_accuracy" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_modality">
-<span class="sig-name descname"><span class="pre">get_mean_modality</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">modality</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mv_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_modality" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord.get_modality_difference">
-<span class="sig-name descname"><span class="pre">get_modality_difference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_modality_difference" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.PIDRecord.print_record">
-<span class="sig-name descname"><span class="pre">print_record</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.PIDRecord.print_record" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.StatsRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MultiInputTester.</span></span><span class="sig-name descname"><span class="pre">StatsRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out_record_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.StatsRecord" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.StatsRecord.get_name">
-<span class="sig-name descname"><span class="pre">get_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out_record_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.StatsRecord.get_name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.StatsRecord.output_auc">
-<span class="sig-name descname"><span class="pre">output_auc</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.StatsRecord.output_auc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.StatsRecord.record">
-<span class="sig-name descname"><span class="pre">record</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.StatsRecord.record" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.StatsRecord.update">
-<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ID</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age_encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.StatsRecord.update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+<section id="multi-med-image-ml-multiinputtester-module">
+<h2>multi_med_image_ml.MultiInputTester module<a class="headerlink" href="#multi-med-image-ml-multiinputtester-module" title="Permalink to this heading">¶</a></h2>
 </section>
 <section id="module-multi_med_image_ml.MultiInputTrainer">
 <span id="multi-med-image-ml-multiinputtrainer-module"></span><h2>multi_med_image_ml.MultiInputTrainer module<a class="headerlink" href="#module-multi_med_image_ml.MultiInputTrainer" title="Permalink to this heading">¶</a></h2>
@@ -3072,51 +2906,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.MedImageLoader.key_to_filename_default"><code class="docutils literal notranslate"><span class="pre">key_to_filename_default()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#module-multi_med_image_ml.MultiInputTester">multi_med_image_ml.MultiInputTester module</a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords"><code class="docutils literal notranslate"><span class="pre">AllRecords</span></code></a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.add_record"><code class="docutils literal notranslate"><span class="pre">AllRecords.add_record()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.get_modality_acc"><code class="docutils literal notranslate"><span class="pre">AllRecords.get_modality_acc()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.get_modality_auc"><code class="docutils literal notranslate"><span class="pre">AllRecords.get_modality_auc()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.greatest_modality_difference"><code class="docutils literal notranslate"><span class="pre">AllRecords.greatest_modality_difference()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.merge_modality_pids"><code class="docutils literal notranslate"><span class="pre">AllRecords.merge_modality_pids()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.AllRecords.plot"><code class="docutils literal notranslate"><span class="pre">AllRecords.plot()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord"><code class="docutils literal notranslate"><span class="pre">FileRecord</span></code></a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_acc"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_acc()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_divides"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_divides()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_diff_date"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_filetypes_diff_date()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_filetypes_name_modality()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_modality_num"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_filetypes_name_modality_num()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_filetypes_name_num()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.get_filetypes_name_num_modality"><code class="docutils literal notranslate"><span class="pre">FileRecord.get_filetypes_name_num_modality()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.FileRecord.print_record"><code class="docutils literal notranslate"><span class="pre">FileRecord.print_record()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester"><code class="docutils literal notranslate"><span class="pre">MultiInputTester</span></code></a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.loop()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.plot()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.read_json()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.test_grad_cam"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.test_grad_cam()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord"><code class="docutils literal notranslate"><span class="pre">PIDRecord</span></code></a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord.add_file_record"><code class="docutils literal notranslate"><span class="pre">PIDRecord.add_file_record()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_accuracy"><code class="docutils literal notranslate"><span class="pre">PIDRecord.get_mean_accuracy()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_mean_modality"><code class="docutils literal notranslate"><span class="pre">PIDRecord.get_mean_modality()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord.get_modality_difference"><code class="docutils literal notranslate"><span class="pre">PIDRecord.get_modality_difference()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.PIDRecord.print_record"><code class="docutils literal notranslate"><span class="pre">PIDRecord.print_record()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.StatsRecord"><code class="docutils literal notranslate"><span class="pre">StatsRecord</span></code></a><ul>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.StatsRecord.get_name"><code class="docutils literal notranslate"><span class="pre">StatsRecord.get_name()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.StatsRecord.output_auc"><code class="docutils literal notranslate"><span class="pre">StatsRecord.output_auc()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.StatsRecord.record"><code class="docutils literal notranslate"><span class="pre">StatsRecord.record()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.StatsRecord.update"><code class="docutils literal notranslate"><span class="pre">StatsRecord.update()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li><a class="reference internal" href="#multi-med-image-ml-multiinputtester-module">multi_med_image_ml.MultiInputTester module</a></li>
 <li><a class="reference internal" href="#module-multi_med_image_ml.MultiInputTrainer">multi_med_image_ml.MultiInputTrainer module</a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer"><code class="docutils literal notranslate"><span class="pre">MultiInputTrainer</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer.model"><code class="docutils literal notranslate"><span class="pre">MultiInputTrainer.model</span></code></a></li>
@@ -3374,7 +3164,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
       
     </aside>
   </div>
-</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=1b90c193"></script>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=d931a58b"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/scripts/furo.js?v=4e2eecee"></script>

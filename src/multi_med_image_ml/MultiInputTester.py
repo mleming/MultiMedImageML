@@ -16,21 +16,37 @@ from .utils import resize_np
 
 # Tests either the model directly or the output files
 class MultiInputTester():
-	"""Used for testing the outputs of MultiInputModule
+	"""Used for testing the outputs of MultiInputModule.
 	
+	Attributes:
+		database (multi_med_image_ml.models.DataBaseWrapper) : Associated database for testing
+		model (multi_med_image_ml.models.MultiInputModule): Model to be tested
+		out_record_folder (str): Folder to output results (default None)
+		checkpoint_dir (str): Folder that has model checkpoints (default none)
+		name (str): Name of the model to be tested (default 'experiment_name')
+		test_name (str): The name of the experiment (default "")
+		database_key (str): Variable used when grouping data together for AUROC analysis
+		min_pids (int):  (default 1)
+		top_not_mean (bool): Given multiple AUC output files, this will select one randomly instead of coming up with the mean prediction of all of them
+		include_inds (list): (default [0,1])
+		same_patients (bool): If true, only plots AUC/Accuracy for patients that are equally divided between groups (default False)
+		x_axis_opts (str): Whether the X axis of the plot should be "images", "patients", or "images_per_patient" (default: "images")
 	"""
-	def __init__(self,database,
-		model=None,
-		out_record_folder=None,
-		checkpoint_dir = None,
-		verbose = False,
-		name = 'experiment_name',
-		test_name="",
-		database_key="ProtocolNameSimplified",
-		min_pids=1,
-		top_not_mean=False,
-		include_inds=[0,1],
-		same_patients=False):
+	
+	def __init__(self,database : multi_med_image_ml.DataBaseWrapper.DataBaseWrapper,
+		model : multi_med_image_ml.models.MultiInputModule,
+		out_record_folder : str = None,
+		checkpoint_dir : str = None,
+		verbose : bool = False,
+		name : str = 'experiment_name',
+		test_name : str = "",
+		database_key : str = "ProtocolNameSimplified",
+		min_pids : int = 1,
+		top_not_mean : bool = False,
+		include_inds : list = [0,1],
+		same_patients : bool = False,
+		x_axis_opts : str = "images"):
+		
 		self.name=name
 		self.checkpoint_dir=checkpoint_dir
 		self.model = model
@@ -45,7 +61,7 @@ class MultiInputTester():
 		self.name = name
 		self.test_name = test_name
 		if self.out_record_folder is not None and self.name is not None:
-			self.stats_record = StatsRecord(
+			self.stats_record = _StatsRecord(
 				os.path.join(self.out_record_folder,"json"),
 				self.name,
 				test_name=self.test_name)
@@ -54,7 +70,7 @@ class MultiInputTester():
 		self.remove_inds = []
 		self.include_cbar = True
 		self.mv_limit = 0.5
-		self.x_axis_opts = "images" # images, patients, or images_per_patient
+		self.x_axis_opts = x_axis_opts # images, patients, or images_per_patient
 		self.x_file_pid = False
 		self.database = database
 		self.min_pids = min_pids
@@ -70,6 +86,12 @@ class MultiInputTester():
 		self.pid_records.plot(os.path.join(
 			self.out_record_folder,"plots","temp.png"))
 	def loop(self,pr: BatchRecord):
+		"""Tests one input and saves it.
+		
+		Args:
+			pr (BatchRecord) : Image batch
+		
+		"""
 		y_pred = self.model(pr,
 			return_regress = True
 			)
@@ -104,6 +126,8 @@ class MultiInputTester():
 				)
 		return
 	def read_json(self):
+		"""Reads all json files output by MultiInputTester."""
+		
 		if self.pid_records is None:
 			self.pid_records = AllRecords(self.database,
 				x_file_pid = self.x_file_pid,
@@ -158,13 +182,22 @@ class MultiInputTester():
 		return "_".join(
 				os.path.basename(json_file).replace('.json','').split("_")[:-1]
 			)
-	def test_grad_cam(self,pr: BatchRecord, add_symlink: bool = True):
+	def grad_cam(self,pr: BatchRecord,
+		add_symlink: bool = True,
+		grad_layer: int = 7) -> torch.Tensor:
+		"""Outputs a gradient class activation map for the input record
 		
+		Args:
+			pr (BatchRecord): Image batch to apply Grad-Cam to
+			add_symlink (bool): If true, adds a symbolic link to the original image in the same folder as the grad-cam is stored in (default True)
+			grad_layer (int):  (default 7)
+		"""
+		self.model.grad_layer = grad_layer
 		if pr.image_records[0].Y_dim[0] > 1:
 			raise Exception(
 				("Grad Cam cannot be applied to" + \
 				" multilabel models (Y_dim: %s)") % str(pr.Y_dim))
-
+		
 		Y = pr.get_Y()
 		y_pred = self.model(pr.get_X(),grad_eval=True)
 		
@@ -191,7 +224,7 @@ class MultiInputTester():
 		# relu on top of the heatmap
 		# expression (2) in https://arxiv.org/pdf/1610.02391.pdf
 		
-		t = heatmap.detach().numpy()
+		t = heatmap.cpu().detach().numpy()
 		for i in range(t.shape[0]):
 			im = pr.image_records[i]
 			
@@ -206,8 +239,9 @@ class MultiInputTester():
 			np.save(os.path.join(out_folder,out_name),npsqueeze)
 			if add_symlink:
 				os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
+		return t
 		
-class StatsRecord():
+class _StatsRecord():
 	def __init__(self,out_record_folder,name,test_name=""):
 		self.test_name=test_name
 		self.out_record_folder = out_record_folder
@@ -341,7 +375,7 @@ class StatsRecord():
 			for a in self.all_c_auroc:
 				fileobj.write(str(a)+"\n")
 
-class FileRecord:
+class _FileRecord:
 	def __init__(self,X_files,
 				Y,
 				y_pred,
@@ -439,7 +473,7 @@ class FileRecord:
 			print((indent*" ") + get_file_str(X_file))
 		print("-")
 
-class PIDRecord:
+class _PIDRecord:
 	def __init__(self,
 			pid,
 			database,
@@ -459,7 +493,7 @@ class PIDRecord:
 			modality,
 			age_encode=False,
 			static_inputs=[]):
-		f = FileRecord(
+		f = _FileRecord(
 				X_files,
 				Y,
 				y_pred,
@@ -572,7 +606,7 @@ class AllRecords:
 		if self.x_file_pid:
 			pid = pid + ",".join(X_files)
 		if pid not in self.pid_records:
-			self.pid_records[pid] = PIDRecord(pid,
+			self.pid_records[pid] = _PIDRecord(pid,
 					self.database,
 					remove_inds=self.remove_inds,
 					database_key=self.database_key,

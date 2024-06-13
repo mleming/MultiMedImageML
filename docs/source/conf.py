@@ -60,5 +60,5 @@ import sys,os
 
 f = os.path.abspath(os.path.join('..', '..','src'))
 sys.path.insert(0, f)
-
 import multi_med_image_ml
+release = multi_med_image_ml.__version__
