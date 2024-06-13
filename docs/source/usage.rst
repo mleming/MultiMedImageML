@@ -56,7 +56,7 @@ The simplest way to train the multi-input module, as other pytorch models are tr
   $   y_pred,_ = model(image)
   $   loss = loss_function(label,y_pred)
   $   loss.backward()
-	$		optimizer.step()
+	$	  optimizer.step()
   $
 
   The MultiInputTrainer module allows for the confound regression functionalities and generally abstracts that process.
