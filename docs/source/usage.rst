@@ -25,7 +25,7 @@ Imaging data is required to get started with this. It was designed and tested wi
 		...
 	
 
-Sample datasets of brain images may be downloaded from sources like `OpenNeuro <https://openneuro.org/>`_.
+Sample `datasets <https://openneuro.org/datasets/ds005216/versions/1.0.1/download>`_ of brain images may be downloaded from sources like `OpenNeuro <https://openneuro.org/>`_.
 
 Data may also be encapsulated in the BatchRecord class, which is recommended for very large datasets.
 
@@ -72,7 +72,7 @@ By default, it builds up this dataframe the first time it reads through a folder
 
 
 
-MedImageLoader by default builds up a database of all images accessed, as well as their metadata. This may be accessed in the ./pandas/ subdirectory.
+MedImageLoader by default builds up a database of all images accessed, as well as their metadata. This may be accessed in the designates directory.
 
 By default, images are resized to 96x96x96. This may also be changed by specifying the X_dim parameter in the dataloader. Resized images are cached as .npy files.
 
@@ -85,6 +85,7 @@ The simplest way to train the multi-input module, as other pytorch models are tr
 
 	from multi_med_image_ml.models import *
 	from multi_med_image_ml.MedImageLoader import *
+	import torch
 	
 	dataloader = MedImageLoader(folder1,folder2)
 	model = MultiInputModule()
@@ -94,7 +95,7 @@ The simplest way to train the multi-input module, as other pytorch models are tr
 		betas = (0.5,0.999),
 		lr= 1e-5
 	)
-	loss_function = nn.MSELoss()
+	loss_function = torch.nn.MSELoss()
 	
 	for image,label in dataloader:
 		optimizer.zero_grad()
@@ -104,12 +105,13 @@ The simplest way to train the multi-input module, as other pytorch models are tr
 		optimizer.step()
 
 
-The MultiInputTrainer module allows for the confound regression functionalities and generally abstracts that process.
+The `MultiInputTrainer`_ module allows for the confound regression functionalities and generally abstracts that process.
 
 .. code-block:: python
 
-	from multi_input_med_image_loader.models import *
-	from src.multi_med_image_ml.MedImageLoader import *
+	from multi_med_image_ml.models import *
+	from multi_med_image_ml.MedImageLoader import *
+	from multi_med_image_ml.MultiInputTrainer import *
 	model = MultiInputModule()
 	
 	dataloader = MedImageLoader(imfolder1,imfolder2,
@@ -120,7 +122,7 @@ The MultiInputTrainer module allows for the confound regression functionalities 
 		batch_by_pid = True
 	)
 	
-	trainer = MultiInputTrainer(model,batch_size=2)
+	trainer = MultiInputTrainer(model)
 	for i in range(3):
 		for p in dataloader:
 			trainer.loop(p,dataloader=medim_loader)
@@ -129,6 +131,30 @@ The MultiInputTrainer module allows for the confound regression functionalities 
 Testing
 -------
 
-The MultiInputTester is a more complex module that allows a variety of tests to be performed on the ML model. One is model performance:
+`MultiInputTester`_ is a more complex module that allows a variety of tests to be performed on the ML model. One is model performance:
 
-TODO
+.. code-block:: python
+
+	
+	from multi_med_image_ml.models import *
+	from multi_med_image_ml.MedImageLoader import *
+	from multi_med_image_ml.MultiInputTester import *
+	
+	model = MultiInputModule()
+	
+	dataloader = MedImageLoader(imfolder1,imfolder2,
+		cache=True,
+		label=["MRAcquisitionType"],
+		confounds=["Slice Thickness","Repetition Time"],
+		return_obj = True,
+		batch_by_pid = True
+	)
+	
+	tester = MultiInputTester(model,dataloader.database)
+	
+	tester.grad_cam()
+	
+	for p in dataloader:
+		tester.loop(p)
+	
+	
