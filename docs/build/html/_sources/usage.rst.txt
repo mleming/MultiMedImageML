@@ -17,14 +17,60 @@ Imaging data is required to get started with this. It was designed and tested wi
 
 .. code-block:: python
 
-	from multi_input_med_image_loader.MedImageLoader import *
+	from multi_med_image_ml.MedImageLoader import *
 	folder1 = '/path/to/data1'
 	folder2 = '/path/to/data2'
 	dataloader = MedImageLoader(folder1,folder2)
-	for image,label in MedImageLoader:
+	for image,label in dataloader:
+		...
+	
+
+Sample datasets of brain images may be downloaded from sources like `OpenNeuro <https://openneuro.org/>`_.
+
+Data may also be encapsulated in the BatchRecord class, which is recommended for very large datasets.
+
+.. code-block:: python
+
+	dataloader = MedImageLoader(folder1,folder2,return_obj=True)
+	for b in dataloader:
+		print(b.get_X()) # image
+		print(b.get_Y()) # label
+
+
+They may also be batched by the patient:
+
+.. code-block:: python
+
+	dataloader = MedImageLoader(folder1,
+				folder2,
+				return_obj=True,
+				group_by_pid=True)
+	for b in dataloader:
 		...
 
-Sample datasets of brain images may be downloaded from sources like [OpenNeuro](https://openneuro.org/).
+
+MedImageLoader may also take in a pandas dataframe containing references to each cached image with the associated metadata:
+
+.. code-block:: python
+
+	pandas_path = '/path/to/dataframe.pkl'
+	dataloader = MedImageLoader(pandas_path)
+
+
+By default, it builds up this dataframe the first time it reads through a folder. The dataframe contains indices that are paths to image files and columns associated with metadata. To read in different variales from this dataframe, you may specify the labels as an argument:
+
+.. code-block:: python
+
+	pandas_path = '/path/to/dataframe.pkl'
+	dataloader = MedImageLoader(pandas_path,
+			label=["MRAcquisitionType"],
+			return_obj=True)
+	
+	for p in dataloader:
+		p.get_X() # Image
+		p.get_Y() # Encoding of MRAcquisitionType
+
+
 
 MedImageLoader by default builds up a database of all images accessed, as well as their metadata. This may be accessed in the ./pandas/ subdirectory.
 
@@ -37,8 +83,8 @@ The simplest way to train the multi-input module, as other pytorch models are tr
 
 .. code-block:: python
 
-	from multi_input_med_image_loader.models import *
-	from src.multi_med_image_ml.MedImageLoader import *
+	from multi_med_image_ml.models import *
+	from multi_med_image_ml.MedImageLoader import *
 	
 	dataloader = MedImageLoader(folder1,folder2)
 	model = MultiInputModule()
@@ -64,7 +110,7 @@ The MultiInputTrainer module allows for the confound regression functionalities 
 
 	from multi_input_med_image_loader.models import *
 	from src.multi_med_image_ml.MedImageLoader import *
-	model = MultiInputModule(Y_dim = (17,4),C_dim=(13,11))
+	model = MultiInputModule()
 	
 	dataloader = MedImageLoader(imfolder1,imfolder2,
 		cache=True,
@@ -83,4 +129,6 @@ The MultiInputTrainer module allows for the confound regression functionalities 
 Testing
 -------
 
-  TODO
+The MultiInputTester is a more complex module that allows a variety of tests to be performed on the ML model. One is model performance:
+
+TODO
