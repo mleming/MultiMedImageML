@@ -55,8 +55,9 @@ class MedImageLoader:
 		n_dyn_inputs (int): Max number of inputs of the ML model, to be passed into BatchRecord when it's used as a patient record (default 14)
 		precedence (list): Because labeling is by image in the database and diagnosis is by patient, this option allows "precedence" in labeling when assigning an overall label to a patient. So, if a patient has three images, two marked as "Healthy" and one marked as "Alzheimer's", you can pass "[Alzheimer's,Healthy]" into precedence and it would assign the whole patient the "Alzheimer's" label (default [])
 	"""
+	
 	def __init__(self,*image_folders,
-			pandas_cache = '../pandas/',
+			pandas_cache = './pandas/',
 			cache = True,
 			key_to_filename = key_to_filename_default,
 			batch_by_pid=False,

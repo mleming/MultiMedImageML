@@ -12,15 +12,17 @@ matplotlib.use('Agg')
 from sklearn.metrics import auc,roc_curve
 import glob
 import warnings
-from .utils import resize_np
+from .utils import resize_np,is_nan
 
 # Tests either the model directly or the output files
-class MultiInputTester():
+class MultiInputTester:
 	"""Used for testing the outputs of MultiInputModule.
 	
+	MultiInputTester abstracts many of the functions for testing DL models, including grad cam and group AUC outputs.
+	
 	Attributes:
-		database (multi_med_image_ml.models.DataBaseWrapper) : Associated database for testing
-		model (multi_med_image_ml.models.MultiInputModule): Model to be tested
+		database (DataBaseWrapper) : Associated database for testing
+		model (MultiInputModule): Model to be tested
 		out_record_folder (str): Folder to output results (default None)
 		checkpoint_dir (str): Folder that has model checkpoints (default none)
 		name (str): Name of the model to be tested (default 'experiment_name')
@@ -33,8 +35,9 @@ class MultiInputTester():
 		x_axis_opts (str): Whether the X axis of the plot should be "images", "patients", or "images_per_patient" (default: "images")
 	"""
 	
-	def __init__(self,database : multi_med_image_ml.DataBaseWrapper.DataBaseWrapper,
-		model : multi_med_image_ml.models.MultiInputModule,
+	def __init__(self,
+		database,
+		model,
 		out_record_folder : str = None,
 		checkpoint_dir : str = None,
 		verbose : bool = False,
@@ -81,10 +84,162 @@ class MultiInputTester():
 		self.include_inds = include_inds
 		self.same_patients = same_patients
 		self.verbose = verbose
-	def plot(self):
+	def plot(self,
+			ind=0,
+			database_key = None,
+			opt = None,
+			divides = None,
+			same_pids_across_groups = False,
+			x_axis_opts = "images",
+			acc_or_auc = "auc"
+		):
+		"""Plots results to a graph. Allows one to analyze individual groups.
+		
+		Args:
+			database_key (str): Variable to group by. Must not be continuous.
+			opt (str): "age_dem", "name_num","name_mod","name_num_group","diff_date"
+			divides (list): List of numbers by which certain options, like name_num, may be grouped.
+			same_pids_across_groups (bool): When analyzing across different groups, allows one to make sure all groups have the same patients (default False)
+			x_axis_opts (str): What to plot on the x axis (may be "images", "patients", or "images per patient")
+			
+		"""
 		os.makedirs(os.path.join(self.out_record_folder,"plots"),exist_ok=True)
-		self.pid_records.plot(os.path.join(
-			self.out_record_folder,"plots","temp.png"))
+		self.pid_records.plot(
+			database_key = database_key,
+			ind = ind,
+			x_axis_opts = x_axis_opts,
+			acc_or_auc = acc_or_auc,
+			opt = opt,
+			divides = divides,
+			same_pids_across_groups = same_pids_across_groups
+			)
+	def auc(self,ind = 0,
+						database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False):
+		return self.pid_records.auc(ind=ind,
+					database_key=database_key,
+					opt=opt,
+					divides=divides,
+					same_pids_across_groups=same_pids_across_groups)
+	def acc(self,database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False):
+		return self.pid_records.acc(database_key=database_key,
+					opt=opt,
+					divides=divides,
+					same_pids_across_groups=same_pids_across_groups)
+	def plot(self,
+			ind = 0,
+			x_axis_opts = "images",
+			acc_or_auc = "auc",
+			database_key = None,
+			opt = None,
+			divides = None,
+			same_pids_across_groups = False):
+		if acc_or_auc == "acc":
+			group_set = self.acc(
+						database_key = database_key,
+						opt = opt,
+						divides = divides,
+						same_pids_across_groups = same_pids_across_groups
+					)
+		elif acc_or_auc == "auc":
+			group_set = self.auc(ind = ind,
+						database_key = database_key,
+						opt = opt,
+						divides = divides,
+						same_pids_across_groups = same_pids_across_groups
+					)
+		else:
+			raise Exception("Invalid opt: %s" % acc_or_auc)
+		plt.clf()
+		for group in group_set:
+			x = group_set[group][acc_or_auc]
+			if is_nan(x): continue
+			if x_axis_opts == "images_per_patient":
+				if group_set[group]["patients"] == 0:
+					y = 0
+				else:
+					y = group_set[group]["images"]/group_set[group]["patients"]
+			else:
+				y = group_set[group][x_axis_opts]
+			plt.scatter(x,y,label=group)
+			plt.text(x,y,group[:10])
+		out_plot_folder = os.path.join(self.out_record_folder,"plots")
+		os.makedirs(out_plot_folder,exist_ok=True)
+		
+		out_plot_file = os.path.join(
+			out_plot_folder,
+			f"{database_key}_{x_axis_opts}_{acc_or_auc}_{opt}.png")
+		plt.savefig(out_plot_file)
+		return
+		X = []
+		Y = []
+		L = []
+		C = []
+		num_skips = 0
+		for l in self.group_set:
+			if self.use_auc:
+				val = self.get_group_auc(l,mv_limit=self.mv_limit)
+			else:
+				val = self.get_group_acc(l,mv_limit=self.mv_limit)
+			if val == -1:
+				#print("Skipping %s" % l)
+				continue
+			x,n_patients,n_images,portion = val
+			if n_patients < self.min_pids and self.min_pids > -1:
+				num_skips += 1
+				continue
+			L.append(l)
+			X.append(x)
+			C.append(portion)
+			if self.x_axis_opts == "images":
+				Y.append(n_images)
+				xlabel = "Num Images" + (" (%d total patients)" % n_patients) \
+					if self.same_patients else ""
+			elif self.x_axis_opts == "patients":
+				Y.append(n_patients)
+				xlabel = "Num Patients"
+			elif self.x_axis_opts == "images_per_patient":
+				Y.append(float(n_images)/n_patients)
+				xlabel = "Mean images per patient"
+			else:
+				raise Exception("Nothing")
+		if num_skips == len(self.group_set):
+			raise Exception(
+				"Not enough patients in any one group with %d minimum PIDs" % \
+					self.min_pids)
+		for x,y,l,c in zip(X,Y,L,C):
+			if np.isnan(x): continue
+			if self.verbose:
+				print("{l:s}: {x:.4f} {y:.4f}".format(c=c,y=y,l=l,x=x))
+			#plt.scatter(y,x,c=c,cmap=plt.cm.viridis)
+			plt.text(y,x,l[:10])#.replace("_","\n"),rotation=0)
+		if self.include_cbar:
+			sc = plt.scatter(np.array(Y),np.array(X),c=np.array(C),
+				cmap=plt.cm.viridis,vmin=0,vmax=1)
+			plt.colorbar(sc,label=cbar_label)
+		else:
+			plt.scatter(np.array(Y),np.array(X))
+		plt.title(title)
+		if self.use_auc:
+			plt.ylabel("AUC")
+		else:
+			plt.ylabel("Accuracy")
+		try:
+			plt.xlabel(self.xlabel)
+		except:
+			pass
+			#print("No data in %s" % self.name)
+			#exit()
+		if output is None:
+			plt.show()
+		else:
+			plt.savefig(output)
+	
 	def loop(self,pr: BatchRecord):
 		"""Tests one input and saves it.
 		
@@ -129,8 +284,7 @@ class MultiInputTester():
 		"""Reads all json files output by MultiInputTester."""
 		
 		if self.pid_records is None:
-			self.pid_records = AllRecords(self.database,
-				x_file_pid = self.x_file_pid,
+			self.pid_records = _AllRecords(self.database,
 				remove_inds = self.remove_inds,
 				database_key = self.database_key,
 				use_auc = self.use_auc,
@@ -177,7 +331,7 @@ class MultiInputTester():
 						xf,yf,ypf,self._json_title_parse(json_file),
 						age_encode=age_encode,static_inputs=static_inputs)
 		if self.same_patients:
-			self.pid_records.merge_modality_pids()
+			self.pid_records.merge_group_pids()
 	def _json_title_parse(self,json_file):
 		return "_".join(
 				os.path.basename(json_file).replace('.json','').split("_")[:-1]
@@ -237,7 +391,7 @@ class MultiInputTester():
 			out_name = f"{bname}_grad.npy"
 			orig_name = f"{bname}_orig.npy"
 			np.save(os.path.join(out_folder,out_name),npsqueeze)
-			if add_symlink:
+			if add_symlink and not os.path.isfile(os.path.join(out_folder,orig_name)):
 				os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
 		return t
 		
@@ -379,54 +533,78 @@ class _FileRecord:
 	def __init__(self,X_files,
 				Y,
 				y_pred,
+				pid,
 				database,
-				modality="",
 				age_encode=False,
 				static_inputs=[],
-				remove_inds=[],
-				c="name_mod",
-				database_key="ProtocolNameSimplified"):
+				remove_inds=[]):
 		self.X_files = sorted(X_files)
 		self.Y = Y
 		self.y_pred = y_pred
-		self.c=c
 		self.database=database
-		self.database_key=database_key
+		self.pid=pid + str(np.argmax(Y))
+		self.dates = None
 		for i in remove_inds:
 			self.y_pred[i] = 0
 		self.age_encode = age_encode
 		self.static_inputs = static_inputs
-		if modality != "":
-			self.modality = modality
-		# ProtocolNameSimplified, MRModality, Modality
-		if self.c == "name_num":
-			self.filetypes_name = self.get_filetypes_name_num()
-		elif self.c == "diff_date":
-			self.filetypes_name = self.get_filetypes_diff_date()
-		elif self.c == "name_mod":
-			self.filetypes_name = self.get_filetypes_name_modality() #self.modality
-		elif self.c == "age_dem":
-			self.filetypes_name = ("Age" if age_encode else "") + " " +("Demo" if len(static_inputs) > 0 else "")
-			if self.filetypes_name == " ": self.filetypes_name = "Only images"
+	def get_group(self,
+						database_key = None,
+						opt = None,
+						divides = None):
+		"""Returns the group the file belongs to
+		"""
+		
+		if opt is None:
+			return "all"
+		elif opt == "name_num":
+			return self.get_filetypes_name_num(divides = divides)
+		elif opt == "diff_date":
+			return self.get_filetypes_diff_date(divides = divides)
+		elif opt == "name_mod":
+			assert(database_key is not None)
+			return self.get_filetypes_name_group(database_key=database_key,
+							divides =divides) #self.group
+		elif opt == "name_num_group":
+			assert(database_key is not None)
+			return self.get_filetypes_name_num_group(
+							database_key=database_key) #self.group
+		elif opt == "age_dem":
+			foo = ("Age" if age_encode else "")
+			foo = foo + " "
+			foo = foo + ("Demo" if len(static_inputs) > 0 else "")
+			if foo == " ": foo = "Only images"
+			return foo
 		else:
-			raise Exception("Invalid argument for self.c: %s" % self.c)
+			raise Exception("Invalid argument: %s" % opt)
 		#self.filetypes_name = " "
-	def get_filetypes_diff_date(self):
+	def get_filetypes_diff_date(self,divides = None):
+		"""Returns groups of files with dates more than X years apart
+		"""
+		
+		if divides is None: divides = [5]
+		
 		if len(self.X_files) == 1:
 			return None # "One Image"
-		self.dates = [self.database.loc[X_file,'ExamEndDTS'] for X_file in self.X_files]
-		self.dates = list(filter(lambda k: k is not None,self.dates))
-		self.dates = [_.split(":")[0].replace("_","-") for _ in self.dates]
-		self.dates = [dateutil.parser.parse(_) for _ in self.dates]
+		if self.dates is None:
+			self.dates = [self.database.loc[X_file,'ExamEndDTS'] \
+				for X_file in self.X_files]
+			self.dates = list(filter(lambda k: k is not None,self.dates))
+			self.dates = [_.split(":")[0].replace("_","-") for _ in self.dates]
+			self.dates = [dateutil.parser.parse(_) for _ in self.dates]
 		date_diff = max(self.dates) - min(self.dates)
 		date_diff = date_diff.days / 365.25
-		divides = [5]
 		ret = self.get_divides(date_diff,divides)
 		ret = ret + (" encoded" if self.age_encode else "")
-		return ret	
-	def get_filetypes_name_num(self):
-		divides = [1,5,10,14]
+		return ret
+			
+	def get_filetypes_name_num(self,divides = None):
+		"""Returns groupings of numbers of files
+		"""
+		
+		if divides is None: divides = [1,5,10,14]
 		return self.get_divides(len(self.X_files),divides)
+		
 	def get_divides(self,val,divides):
 		divides = sorted(divides)
 		for i,d in enumerate(divides):
@@ -437,35 +615,45 @@ class _FileRecord:
 					return "%d"%s2
 				return "%d-%d" %(s1+1,s2)
 		return "%s+" % divides[-1]
-	def get_filetypes_name_num_modality(self):
-		self.filetypes = [self.database.loc[_,self.database_key] \
+		
+	def get_filetypes_name_num_group(self,database_key):
+		"""Returns the number of different modalities in a given set of images
+		"""
+		
+		ftypes = [self.database.loc[_,database_key] \
 			for _ in self.X_files]
-		for i,f in enumerate(self.filetypes):
-			if f is None: self.filetypes[i] = "None"
-			self.filetypes[i] = self.filetypes[i].strip().upper()
-		self.filetypes = set(self.filetypes)
-		return  str(len(self.filetypes))
-	def get_filetypes_name_modality(self):
-		self.filetypes = [self.database.loc[_,self.database_key] \
+		for i,f in enumerate(ftypes):
+			if f is None: ftypes[i] = "None"
+			ftypes[i] = ftypes[i].strip().upper()
+		ftypes = set(ftypes)
+		return str(len(ftypes))
+		
+	def get_filetypes_name_group(self,database_key):
+		"""Returns a list of unique modalities in a given set of images
+		"""
+		
+		ftypes = [self.database.loc[_,database_key] \
 			for _ in self.X_files]
-		for i,f in enumerate(self.filetypes):
-			if f is None: self.filetypes[i] = "None"
-			self.filetypes[i] = self.filetypes[i].strip().upper()
-		self.filetypes = set(self.filetypes)
-		return  "_".join(sorted(list(self.filetypes)))
-	def get_filetypes_name_modality_num(self):
-		self.filetypes = [self.database.loc[_,self.database_key] \
+		for i,f in enumerate(ftypes):
+			if f is None: ftypes[i] = "None"
+			ftypes[i] = ftypes[i].strip().upper()
+		return  "_".join(sorted(list(set(ftypes))))
+		
+	def get_filetypes_name_group_num(self,database_key):
+		"""Returns a list of unique modalities in a given set of images
+		"""
+
+		ftypes = [self.database.loc[_,database_key] \
 			for _ in self.X_files]
-		for i,f in enumerate(self.filetypes):
-			if f is None: self.filetypes[i] = "None"
-			self.filetypes[i] = self.filetypes[i].strip().upper()
-		self.filetypes = set(self.filetypes)
-		if len(self.filetypes) < 3 or True:
-			return  "_".join(sorted(list(self.filetypes)))
-		else:
-			return  str(len(self.filetypes)) + " modalities"
+		for i,f in enumerate(ftypes):
+			if f is None: ftypes[i] = "None"
+			ftypes[i] = ftypes[i].strip().upper()
+		ftypes = set(ftypes)
+		return  "_".join(sorted(list(ftypes)))
+
 	def get_acc(self):
 		return ((np.argmax(self.Y)) == (np.argmax(self.y_pred))).astype(float)
+
 	def print_record(self,indent=0):
 		print("-")
 		print((indent * " ") + str(self.get_acc()))
@@ -478,51 +666,73 @@ class _PIDRecord:
 			pid,
 			database,
 			remove_inds=[],
-			database_key="ProtocolNameSimplified",
 			top_not_mean=False):
 		self.remove_inds=remove_inds
 		self.pid = pid
-		self.file_records = {}
+		self.file_records = []
 		self.database = database
-		self.database_key = database_key
 		self.top_not_mean=top_not_mean
 	def add_file_record(self,
 			X_files,
 			Y,
 			y_pred,
-			modality,
 			age_encode=False,
 			static_inputs=[]):
 		f = _FileRecord(
 				X_files,
 				Y,
 				y_pred,
+				self.pid,
 				self.database,
-				modality = modality,
 				age_encode = age_encode,
 				static_inputs = static_inputs,
-				remove_inds = self.remove_inds,
-				database_key = self.database_key)
-		key = f.filetypes_name
-		if key is None: return None
-		if key not in self.file_records:
-			self.file_records[key] = []
-		self.file_records[key].append(f)
-		return key
-	def get_mean_modality(self,modality, mv_limit = 0.0):
-		if modality not in self.file_records:
+				remove_inds = self.remove_inds)
+		self.file_records.append(f)
+	
+	def get_group_dict(self,
+						database_key = None,
+						opt = None,
+						divides = None):
+		""" Returns a dictionary of all groupings of the files for this 
+		particular patient.
+		"""
+		
+		group_dict = {}
+		for f in self.file_records:
+			group = f.get_group(
+						database_key = database_key,
+						opt = opt,
+						divides = divides
+					)
+			if group not in group_dict:
+				group_dict[group] = []
+			group_dict[group].append(f)
+		return group_dict
+	
+	def get_mean_group(self,
+						group,
+						database_key = None,
+						opt = None,
+						divides = None,
+						top_not_mean = False,
+						mv_limit = 0.0):
+		
+		group_dict = self.get_group_dict(database_key = None,
+										opt = None,
+										divides = None)
+		if group not in group_dict:
 			return -1
 		else:
 			Ys = []
 			yps = []
 			X_file_set = set()
-			for fr in sorted(self.file_records[modality],
+			for fr in sorted(group_dict[group],
 				key=lambda k: len(k.X_files),
 				reverse=False):
 				Ys.append(fr.Y)
 				yps.append(fr.y_pred)
 				for X_file in fr.X_files: X_file_set.add(X_file)
-				if self.top_not_mean:
+				if top_not_mean:
 					break
 		Ys = np.array(Ys)
 		yps = np.array(yps)
@@ -533,44 +743,43 @@ class _PIDRecord:
 		Ys = Ys_
 		max_val = np.max(yps)
 		if max_val < mv_limit:
-			#print("SKIPSIES")
 			return -1
 		if not np.all([(_ == 0 or _ == 1) for _ in Ys]):
-			#print("NOPESIES")
 			return -1
 		return Ys,yps,len(X_file_set)
-	def get_mean_accuracy(self,modality):
-		if modality not in self.file_records:
+	
+	def get_mean_accuracy(self,
+						group,
+						database_key = None,
+						opt = None,
+						divides = None,
+						top_not_mean = False,
+						mv_limit = 0.0):
+		
+		group_dict = self.get_group_dict(database_key = None,
+										opt = None,
+										divides = None)
+		if group not in group_dict:
 			return -1
 		else:
 			sum_ = 0.0
 			c = 0
-			for fr in self.file_records[modality]:
+			for fr in group_dict[group]:
 				sum_ += fr.get_acc()
 				c += 1
 			return sum_ / c
-	def get_modality_difference(self):
-		modvals = {}
-		for modality in set(self.file_records):
-			val = self.get_mean_accuracy(modality)
-			if val == -1: continue
-			modvals[modality] = val #np.mean((np.argmax(Y,axis=0) == np.argmax(y_pred,axis=0)).astype(float))
-		if len(modvals) == 0: return 0
-		return max([modvals[m] for m in modvals]) - \
-			min([modvals[m] for m in modvals])
 	def print_record(self):
 		print("---")
 		print(self.pid)
 		print(" ")
-		for modality in self.file_records:
-			print(modality)
-			print(self.get_mean_accuracy(modality))
-			for file_record in self.file_records[modality]:
+		for group in self.file_records:
+			print(group)
+			print(self.get_mean_accuracy(group))
+			for file_record in self.file_records[group]:
 				file_record.print_record(indent=4)
 
-class AllRecords:
+class _AllRecords:
 	def __init__(self,database,
-			x_file_pid = False,
 			remove_inds=[],
 			database_key="ProtocolNameSimplified",
 			use_auc=True,
@@ -585,9 +794,8 @@ class AllRecords:
 			verbose=False):
 		self.use_auc=use_auc
 		self.pid_records = {}
-		self.modality_pid_sets = {} # Sets of patients who have a certain modality
-		self.modality_set = set()
-		self.x_file_pid = x_file_pid
+		self.group_pid_sets = {} # Sets of patients who have a certain group
+		self.group_set = set()
 		self.remove_inds = remove_inds
 		self.database = database
 		self.database_key = database_key
@@ -600,52 +808,155 @@ class AllRecords:
 		self.same_patients = same_patients
 		self.name=name
 		self.verbose=verbose
-	def add_record(self,pid,X_files,Y,y_pred,modality,
+	def add_record(self,
+			pid,
+			X_files,
+			Y,
+			y_pred,
+			group,
 			age_encode=False,
 			static_inputs=[]):
-		if self.x_file_pid:
-			pid = pid + ",".join(X_files)
+
 		if pid not in self.pid_records:
 			self.pid_records[pid] = _PIDRecord(pid,
 					self.database,
-					remove_inds=self.remove_inds,
-					database_key=self.database_key,
-					top_not_mean=self.top_not_mean)
+					remove_inds=self.remove_inds)
 		
-		key = self.pid_records[pid].add_file_record(X_files,Y,y_pred,modality,
-			age_encode=age_encode,static_inputs=static_inputs)
-		if key is not None:
-			self.modality_set.add(key)
-			if key not in self.modality_pid_sets:
-				self.modality_pid_sets[key] = set()
-			self.modality_pid_sets[key].add(pid)
+		self.pid_records[pid].add_file_record(X_files,
+						Y,
+						y_pred,
+						age_encode=age_encode,
+						static_inputs=static_inputs)
+	
 	# Makes it so that this only outputs records of the same set of patients for
 	# all considered modalities
-	def merge_modality_pids(self):
-		pid_set = set(self.pid_records)
-		if self.min_pids > len(pid_set):
-			raise Exception("Min pids is %d, but total pids is %d" % \
-				(self.min_pids,len(pid_set)))
-		exclude_modalities = set()
-		lenlist = sorted([(len(self.modality_pid_sets[m]),m)\
-			 for m in self.modality_set],reverse=True)
-		for l,m in lenlist:
-			temp = pid_set.intersection(self.modality_pid_sets[m])
-			if len(temp) < self.min_pids and self.min_pids > -1:
-				exclude_modalities.add(m)
-			else:
-				pid_set = temp
-		self.modality_set = self.modality_set - exclude_modalities
-		for modality in self.modality_set:
-			self.modality_pid_sets[modality] = pid_set
-	def get_modality_auc(self,modality,mv_limit=0.5):
-		assert(modality in self.modality_set)
+	def get_group_dict(self,
+						database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False,
+						):
+		""" Returns a dictionary in which file records are sorted by groups
+		"""
+		group_dicts = {}
+		group_pids = {}
+		for pid in self.pid_records:
+			group_dict = self.pid_records[pid].get_group_dict(
+										database_key=database_key,
+										opt=opt,
+										divides=divides)
+			for group in group_dict:
+				if group not in group_dicts:
+					group_dicts[group] = []
+					group_pids[group] = set()
+				group_dicts[group] = group_dicts[group] + group_dict[group]
+				group_pids[group].add(pid)
+		if same_pids_across_groups:
+			intersect_pids = None
+			for group in group_pids:
+				if intersect_pids is None: intersect_pids = group_pids[group]
+				else: intersect_pids = intersect_pids.intersect(group_pids[group])
+			group_dicts_same_pid = {}
+			for group in group_dicts:
+				group_dicts_same_pid[group] = []
+				for file in group_dicts[group]:
+					if file.pid in intersect_pids:
+						group_dicts_same_pid[group].append(file)
+			group_dicts = group_dicts_same_pid
+		return group_dicts
+	
+	def get_group_pred_arrs(self,database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False,
+						):
+		"""Returns set of prediction arrays with the 
+		
+		"""
+		group_dict = self.get_group_dict(
+							database_key = database_key,
+							divides=divides,
+							opt=opt,
+							same_pids_across_groups=same_pids_across_groups)
+		group_stat = {}
+		for group in group_dict:
+			group_stat[group] = {}
+			for file in group_dict[group]:
+				if file.pid not in group_stat[group]:
+					group_stat[group][file.pid] = (file.Y,file.y_pred,1)
+				else:
+					Y_all,y_pred_all,image_count = group_stat[group][file.pid]
+					group_stat[group][file.pid] = (file.Y+Y_all,
+											file.y_pred+y_pred_all,
+											image_count+1)
+		# Mean by patient ID
+		for group in group_stat:
+			Y_all_group = []
+			y_all_pred_group = []
+			patient_count = 0
+			image_count = 0
+			for pid in group_stat[group]:
+				Y_all,y_pred_all,imc = group_stat[group][pid]
+				Y_all_group.append(np.array(Y_all)/imc)
+				y_all_pred_group.append(np.array(y_pred_all)/imc)
+				patient_count += 1
+				image_count += imc
+			Y_all_group = np.array(Y_all_group)
+			y_all_pred_group = np.array(y_all_pred_group)
+			group_stat[group] = (Y_all_group,
+								y_all_pred_group,
+								image_count,
+								patient_count)
+		
+		return group_stat
+	
+	def auc(self,ind = 0,
+						database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False):
+		group_stat = self.get_group_pred_arrs(
+						database_key = database_key,
+						opt=opt,divides=divides,
+						same_pids_across_groups=same_pids_across_groups)
+		group_aucs = {}
+		for group in group_stat:
+			Ys,y_preds,image_count,patient_count = group_stat[group]
+			with warnings.catch_warnings():
+				warnings.simplefilter("ignore")
+				fpr, tpr, thresholds = roc_curve(Ys[:,ind], y_preds[:,ind])
+				auc_ = auc(fpr,tpr)
+				group_aucs[group] = {"auc": auc_,
+									"images":image_count,
+									"patients":patient_count}
+		return group_aucs
+	
+	def acc(self,database_key = None,
+						opt = None,
+						divides = None,
+						same_pids_across_groups = False):
+		group_stat = self.get_group_pred_arrs(
+						database_key = database_key,
+						opt=opt,divides=divides,
+						same_pids_across_groups=same_pids_across_groups)
+		group_accs = {}
+		for group in group_stat:
+			Ys,y_preds,image_count,patient_count = group_stat[group]
+			acc = np.mean(np.argmax(Ys,axis=1) == np.argmax(y_preds,axis=1))
+			
+			group_accs[group] = {"acc":acc,
+								"images":image_count,
+								"patients":patient_count}
+		return group_accs
+	
+	def get_group_auc(self,group,mv_limit=0.5):
+		assert(group in self.group_set)
 		Ys= []
 		y_preds = []
 		n_images_total = 0
-		for pid in self.modality_pid_sets[modality]:
+		for pid in self.group_pid_sets[group]:
 			pid_record = self.pid_records[pid]
-			val = pid_record.get_mean_modality(modality,mv_limit=mv_limit)
+			val = pid_record.get_mean_group(group,mv_limit=mv_limit)
 			if val == -1: continue
 			y_,yp_,n_images = val
 			Ys.append(y_)
@@ -690,14 +1001,14 @@ class AllRecords:
 		if c == 0: return -1
 		mean_auc = mean_auc / c
 		return mean_auc,tot_n_patients,n_images_total,np.mean(Ys[:,0])
-	def get_modality_acc(self,modality,mv_limit=0.5):
-		assert(modality in self.modality_set)
+	def get_group_acc(self,group,mv_limit=0.5):
+		assert(group in self.group_set)
 		Ys= []
 		y_preds = []
 		n_images_total = 0
-		for pid in self.modality_pid_sets[modality]:
+		for pid in self.group_pid_sets[group]:
 			pid_record = self.pid_records[pid]
-			val = pid_record.get_mean_modality(modality,mv_limit=mv_limit)
+			val = pid_record.get_mean_group(group,mv_limit=mv_limit)
 			if val == -1:
 				#print("Skipping %s" % pid)
 				continue
@@ -728,13 +1039,13 @@ class AllRecords:
 			mean_acc += np.mean(equals)
 		return mean_acc,tot_n_patients,n_images_total,np.mean(Ys[:,0])
 
-	def greatest_modality_difference(self):
+	def greatest_group_difference(self):
 		m = -1
 		mprec = None
 		tuples = []
 		for pid in self.pid_records:
 			prec = self.pid_records[pid]
-			cur_m = prec.get_modality_difference()
+			cur_m = prec.get_group_difference()
 			tuples.append((cur_m,prec))
 			if cur_m > m or m == -1:
 				mprec = prec
@@ -749,68 +1060,5 @@ class AllRecords:
 		#t = tuples[int(len(tuples) * 0.86)]
 		#print(t)
 		#return t[1]
-	def plot(self,output=None,title=""):
-		X = []
-		Y = []
-		L = []
-		C = []
-		num_skips = 0
-		for l in self.modality_set:
-			if self.use_auc:
-				val = self.get_modality_auc(l,mv_limit=self.mv_limit)
-			else:
-				val = self.get_modality_acc(l,mv_limit=self.mv_limit)
-			if val == -1:
-				#print("Skipping %s" % l)
-				continue
-			x,n_patients,n_images,portion = val
-			if n_patients < self.min_pids and self.min_pids > -1:
-				num_skips += 1
-				continue
-			L.append(l)
-			X.append(x)
-			C.append(portion)
-			if self.x_axis_opts == "images":
-				Y.append(n_images)
-				xlabel = "Num Images" + (" (%d total patients)" % n_patients) \
-					if self.same_patients else ""
-			elif self.x_axis_opts == "patients":
-				Y.append(n_patients)
-				xlabel = "Num Patients"
-			elif self.x_axis_opts == "images_per_patient":
-				Y.append(float(n_images)/n_patients)
-				xlabel = "Mean images per patient"
-			else:
-				raise Exception("Nothing")
-		if num_skips == len(self.modality_set):
-			raise Exception(
-				"Not enough patients in any one group with %d minimum PIDs" % \
-					self.min_pids)
-		for x,y,l,c in zip(X,Y,L,C):
-			if np.isnan(x): continue
-			if self.verbose:
-				print("{l:s}: {x:.4f} {y:.4f}".format(c=c,y=y,l=l,x=x))
-			#plt.scatter(y,x,c=c,cmap=plt.cm.viridis)
-			plt.text(y,x,l[:10])#.replace("_","\n"),rotation=0)
-		if self.include_cbar:
-			sc = plt.scatter(np.array(Y),np.array(X),c=np.array(C),
-				cmap=plt.cm.viridis,vmin=0,vmax=1)
-			plt.colorbar(sc,label=cbar_label)
-		else:
-			plt.scatter(np.array(Y),np.array(X))
-		plt.title(title)
-		if self.use_auc:
-			plt.ylabel("AUC")
-		else:
-			plt.ylabel("Accuracy")
-		try:
-			plt.xlabel(self.xlabel)
-		except:
-			pass
-			#print("No data in %s" % self.name)
-			#exit()
-		if output is None:
-			plt.show()
-		else:
-			plt.savefig(output)
+
 
