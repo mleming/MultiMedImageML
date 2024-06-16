@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import json
+import dateutil
 from .Records import BatchRecord
 import matplotlib.pyplot as plt
 import matplotlib
@@ -43,12 +44,7 @@ class MultiInputTester:
 		verbose : bool = False,
 		name : str = 'experiment_name',
 		test_name : str = "",
-		database_key : str = "ProtocolNameSimplified",
-		min_pids : int = 1,
-		top_not_mean : bool = False,
-		include_inds : list = [0,1],
-		same_patients : bool = False,
-		x_axis_opts : str = "images"):
+		include_inds : list = [0,1]):
 		
 		self.name=name
 		self.checkpoint_dir=checkpoint_dir
@@ -69,20 +65,12 @@ class MultiInputTester:
 				self.name,
 				test_name=self.test_name)
 		self.pid_records = None
-		self.use_auc=True
 		self.remove_inds = []
 		self.include_cbar = True
 		self.mv_limit = 0.5
-		self.x_axis_opts = x_axis_opts # images, patients, or images_per_patient
 		self.x_file_pid = False
 		self.database = database
-		self.min_pids = min_pids
-		self.top_not_mean = top_not_mean
-		if not isinstance(self.database,pd.DataFrame):
-			self.database = self.database.database
-		self.database_key = database_key
 		self.include_inds = include_inds
-		self.same_patients = same_patients
 		self.verbose = verbose
 	def plot(self,
 			ind=0,
@@ -157,6 +145,7 @@ class MultiInputTester:
 			raise Exception("Invalid opt: %s" % acc_or_auc)
 		plt.clf()
 		for group in group_set:
+			if group is None: continue
 			x = group_set[group][acc_or_auc]
 			if is_nan(x): continue
 			if x_axis_opts == "images_per_patient":
@@ -166,8 +155,8 @@ class MultiInputTester:
 					y = group_set[group]["images"]/group_set[group]["patients"]
 			else:
 				y = group_set[group][x_axis_opts]
-			plt.scatter(x,y,label=group)
-			plt.text(x,y,group[:10])
+			plt.scatter(y,x,c='blue',label=group)
+			plt.text(y,x,group[:10])
 		out_plot_folder = os.path.join(self.out_record_folder,"plots")
 		os.makedirs(out_plot_folder,exist_ok=True)
 		
@@ -286,14 +275,8 @@ class MultiInputTester:
 		if self.pid_records is None:
 			self.pid_records = _AllRecords(self.database,
 				remove_inds = self.remove_inds,
-				database_key = self.database_key,
-				use_auc = self.use_auc,
-				min_pids = self.min_pids,
 				mv_limit = self.mv_limit,
-				top_not_mean = self.top_not_mean,
 				include_inds = self.include_inds,
-				x_axis_opts = self.x_axis_opts,
-				same_patients = self.same_patients,
 				name = self.name,
 				verbose = self.verbose)
 		json_files = glob.glob(os.path.join(self.out_record_folder,"json",
@@ -327,11 +310,11 @@ class MultiInputTester:
 						static_inputs = json_dict[pid][mm]["static_inputs"]
 					else:
 						static_inputs = []
-					self.pid_records.add_record(pid,
+					self.pid_records.add_record(pid + str(np.argmax(yf)),
 						xf,yf,ypf,self._json_title_parse(json_file),
 						age_encode=age_encode,static_inputs=static_inputs)
-		if self.same_patients:
-			self.pid_records.merge_group_pids()
+		#if self.same_patients:
+		#	self.pid_records.merge_group_pids()
 	def _json_title_parse(self,json_file):
 		return "_".join(
 				os.path.basename(json_file).replace('.json','').split("_")[:-1]
@@ -394,7 +377,11 @@ class MultiInputTester:
 			if add_symlink and not os.path.isfile(os.path.join(out_folder,orig_name)):
 				os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
 		return t
-		
+
+class NotEnoughPatients(Exception):
+	def __init__(self, message):
+		self.message = message
+	
 class _StatsRecord():
 	def __init__(self,out_record_folder,name,test_name=""):
 		self.test_name=test_name
@@ -424,10 +411,10 @@ class _StatsRecord():
 		Path(os.path.join(out_record_folder,"%s_%d.json" % (name,num))).touch()
 		return "%s_%d" % (name,num)
 	def update(self,Y,y_pred,C,c_pred,ID,X_files,age_encode=False,static_inputs=[]):
-		if torch.is_tensor(Y): Y = Y.detach().numpy()
-		if torch.is_tensor(y_pred): y_pred = y_pred.detach().numpy()
-		if torch.is_tensor(C): C = C.detach().numpy()
-		if torch.is_tensor(c_pred): c_pred = c_pred.detach().numpy()
+		if torch.is_tensor(Y): Y = Y.cpu().detach().numpy()
+		if torch.is_tensor(y_pred): y_pred = y_pred.cpu().detach().numpy()
+		if torch.is_tensor(C): C = C.cpu().detach().numpy()
+		if torch.is_tensor(c_pred): c_pred = c_pred.cpu().detach().numpy()
 		
 		self.x_files_read = self.x_files_read.union(set(X_files))
 		self.pids_read.add(ID)
@@ -539,10 +526,14 @@ class _FileRecord:
 				static_inputs=[],
 				remove_inds=[]):
 		self.X_files = sorted(X_files)
-		self.Y = Y
-		self.y_pred = y_pred
+		self.pid=pid #+ str(np.argmax(Y))
+		self.Y = np.array(Y)
+		if len(self.Y.shape) == 1:
+			self.Y = np.expand_dims(self.Y,axis=0)
+		self.y_pred = np.array(y_pred)
+		if len(self.y_pred.shape) == 1:
+			self.y_pred = np.expand_dims(self.y_pred,axis=0)
 		self.database=database
-		self.pid=pid + str(np.argmax(Y))
 		self.dates = None
 		for i in remove_inds:
 			self.y_pred[i] = 0
@@ -563,16 +554,15 @@ class _FileRecord:
 			return self.get_filetypes_diff_date(divides = divides)
 		elif opt == "name_mod":
 			assert(database_key is not None)
-			return self.get_filetypes_name_group(database_key=database_key,
-							divides =divides) #self.group
+			return self.get_filetypes_name_group(database_key=database_key) #self.group
 		elif opt == "name_num_group":
 			assert(database_key is not None)
 			return self.get_filetypes_name_num_group(
 							database_key=database_key) #self.group
 		elif opt == "age_dem":
-			foo = ("Age" if age_encode else "")
+			foo = ("Age" if self.age_encode else "")
 			foo = foo + " "
-			foo = foo + ("Demo" if len(static_inputs) > 0 else "")
+			foo = foo + ("Demo" if len(self.static_inputs) > 0 else "")
 			if foo == " ": foo = "Only images"
 			return foo
 		else:
@@ -587,11 +577,7 @@ class _FileRecord:
 		if len(self.X_files) == 1:
 			return None # "One Image"
 		if self.dates is None:
-			self.dates = [self.database.loc[X_file,'ExamEndDTS'] \
-				for X_file in self.X_files]
-			self.dates = list(filter(lambda k: k is not None,self.dates))
-			self.dates = [_.split(":")[0].replace("_","-") for _ in self.dates]
-			self.dates = [dateutil.parser.parse(_) for _ in self.dates]
+			self.dates = [self.database.get_exam_date(X_file) for X_file in self.X_files]
 		date_diff = max(self.dates) - min(self.dates)
 		date_diff = date_diff.days / 365.25
 		ret = self.get_divides(date_diff,divides)
@@ -620,7 +606,7 @@ class _FileRecord:
 		"""Returns the number of different modalities in a given set of images
 		"""
 		
-		ftypes = [self.database.loc[_,database_key] \
+		ftypes = [self.database.loc_val(_,database_key) \
 			for _ in self.X_files]
 		for i,f in enumerate(ftypes):
 			if f is None: ftypes[i] = "None"
@@ -632,7 +618,7 @@ class _FileRecord:
 		"""Returns a list of unique modalities in a given set of images
 		"""
 		
-		ftypes = [self.database.loc[_,database_key] \
+		ftypes = [self.database.loc_val(_,database_key) \
 			for _ in self.X_files]
 		for i,f in enumerate(ftypes):
 			if f is None: ftypes[i] = "None"
@@ -643,7 +629,7 @@ class _FileRecord:
 		"""Returns a list of unique modalities in a given set of images
 		"""
 
-		ftypes = [self.database.loc[_,database_key] \
+		ftypes = [self.database.loc_val(_,database_key) \
 			for _ in self.X_files]
 		for i,f in enumerate(ftypes):
 			if f is None: ftypes[i] = "None"
@@ -704,6 +690,8 @@ class _PIDRecord:
 						opt = opt,
 						divides = divides
 					)
+			#except:
+			#	continue
 			if group not in group_dict:
 				group_dict[group] = []
 			group_dict[group].append(f)
@@ -852,57 +840,84 @@ class _AllRecords:
 				group_dicts[group] = group_dicts[group] + group_dict[group]
 				group_pids[group].add(pid)
 		if same_pids_across_groups:
+			
 			intersect_pids = None
 			for group in group_pids:
 				if intersect_pids is None: intersect_pids = group_pids[group]
-				else: intersect_pids = intersect_pids.intersect(group_pids[group])
+				else: intersect_pids = intersect_pids.intersection(group_pids[group])
+				print(intersect_pids)
+			if intersect_pids is None or len(intersect_pids) == 0:
+				raise NotEnoughPatients("No patients that intersect between groups")
 			group_dicts_same_pid = {}
 			for group in group_dicts:
-				group_dicts_same_pid[group] = []
-				for file in group_dicts[group]:
-					if file.pid in intersect_pids:
-						group_dicts_same_pid[group].append(file)
+				filerec_list = []
+				for filerec in group_dicts[group]:
+					if filerec.pid in intersect_pids:
+						filerec_list.append(filerec)
+				if len(filerec_list) > 0:
+					group_dicts_same_pid[group] = filerec_list
 			group_dicts = group_dicts_same_pid
 		return group_dicts
 	
-	def get_group_pred_arrs(self,database_key = None,
+	def get_group_pred_arrs(self,
+						database_key = None,
 						opt = None,
 						divides = None,
-						same_pids_across_groups = False,
+						same_pids_across_groups = False
 						):
 		"""Returns set of prediction arrays with the 
 		
 		"""
+		
 		group_dict = self.get_group_dict(
 							database_key = database_key,
-							divides=divides,
-							opt=opt,
-							same_pids_across_groups=same_pids_across_groups)
+							divides = divides,
+							opt = opt,
+							same_pids_across_groups = same_pids_across_groups)
+		
 		group_stat = {}
+		
 		for group in group_dict:
 			group_stat[group] = {}
-			for file in group_dict[group]:
-				if file.pid not in group_stat[group]:
-					group_stat[group][file.pid] = (file.Y,file.y_pred,1)
+			for filerec in group_dict[group]:
+				
+				assert(len(filerec.Y.shape) == 2)
+				assert(len(filerec.y_pred.shape) == 2)
+				if filerec.pid not in group_stat[group]:
+					group_stat[group][filerec.pid] = (filerec.Y,filerec.y_pred,1)
 				else:
-					Y_all,y_pred_all,image_count = group_stat[group][file.pid]
-					group_stat[group][file.pid] = (file.Y+Y_all,
-											file.y_pred+y_pred_all,
+					Y_all,y_pred_all,image_count = group_stat[group][filerec.pid]
+					group_stat[group][filerec.pid] = (filerec.Y+Y_all,
+											filerec.y_pred+y_pred_all,
 											image_count+1)
+		
 		# Mean by patient ID
 		for group in group_stat:
-			Y_all_group = []
-			y_all_pred_group = []
+			Y_all_group = None
+			y_all_pred_group = None
 			patient_count = 0
 			image_count = 0
+			assert(len(group_stat[group]) > 0)
 			for pid in group_stat[group]:
 				Y_all,y_pred_all,imc = group_stat[group][pid]
-				Y_all_group.append(np.array(Y_all)/imc)
-				y_all_pred_group.append(np.array(y_pred_all)/imc)
+				if Y_all_group is None:
+					Y_all_group = Y_all / imc
+					y_all_pred_group = y_pred_all / imc
+				else:
+					Y_all_group = np.concatenate(
+						(Y_all_group,Y_all / imc),
+						axis=0)
+					y_all_pred_group = np.concatenate(
+						(y_all_pred_group,y_pred_all / imc),
+						axis=0)
+				assert(len(Y_all.shape) == 2)
+				assert(len(y_pred_all.shape) == 2)
 				patient_count += 1
 				image_count += imc
-			Y_all_group = np.array(Y_all_group)
-			y_all_pred_group = np.array(y_all_pred_group)
+			
+			assert(len(Y_all_group.shape) == 2)
+			assert(len(y_all_pred_group.shape) == 2)
+			assert(Y_all_group.shape == y_all_pred_group.shape)
 			group_stat[group] = (Y_all_group,
 								y_all_pred_group,
 								image_count,
@@ -931,14 +946,16 @@ class _AllRecords:
 									"patients":patient_count}
 		return group_aucs
 	
-	def acc(self,database_key = None,
-						opt = None,
-						divides = None,
-						same_pids_across_groups = False):
+	def acc(self,
+				database_key = None,
+				opt = None,
+				divides = None,
+				same_pids_across_groups = False):
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
-						opt=opt,divides=divides,
-						same_pids_across_groups=same_pids_across_groups)
+						opt = opt,
+						divides = divides,
+						same_pids_across_groups = same_pids_across_groups)
 		group_accs = {}
 		for group in group_stat:
 			Ys,y_preds,image_count,patient_count = group_stat[group]
@@ -1060,5 +1077,4 @@ class _AllRecords:
 		#t = tuples[int(len(tuples) * 0.86)]
 		#print(t)
 		#return t[1]
-
 
