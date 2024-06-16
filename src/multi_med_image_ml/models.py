@@ -438,8 +438,6 @@ class MultiInputModule(nn.Module):
 			encoded_input (bool): Indicator that X is input that's already been encoded and can be put straight into the classifier (default False)
 		
 		"""
-		dates1 = None
-		bdate1 = None
 		use_regression = hasattr(self,'regressor') and \
 			(self.regressor is not None) and \
 			(self.training or return_regress)
@@ -453,11 +451,12 @@ class MultiInputModule(nn.Module):
 						raise Exception(
 					"Number of static inputs not equal to input: %d != %d"\
 						 % (len(static_inputs),self.n_stat_inputs))
-				dates1 = x.get_exam_dates()
+				dates = x.get_exam_dates()
 				bdates = x.get_birth_dates()
+				bdate = None
 				for i,b in enumerate(bdates):
 					if b is not None:
-						bdate1 = b
+						bdate = b
 				x = x.get_X(augment=self.training)
 				assert(torch.is_tensor(x))
 				
@@ -511,9 +510,6 @@ class MultiInputModule(nn.Module):
 				
 			if return_encoded:
 				return x
-		else:
-			dates1 = dates
-			bdate1 = bdate
 		if use_regression:
 			reg = self.regressor(x)
 			# Encode dynamic inputs with dates using positional encoding
@@ -521,11 +517,11 @@ class MultiInputModule(nn.Module):
 			(self.training and self.static_dropout and \
 				random.choice([True,False])):
 			age_encodings = []
-			if dates1 is not None:
-				for i,date in enumerate(dates1):
+			if dates is not None:
+				for i,date in enumerate(dates):
 					age_encoding = get_age_encoding(
 									date,
-									bdate1,
+									bdate,
 									d=self.latent_dim)
 					age_encodings.append(age_encoding)
 				age_encodings = np.array(age_encodings)

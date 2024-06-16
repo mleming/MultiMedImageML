@@ -162,7 +162,7 @@ class MultiInputTester:
 		
 		out_plot_file = os.path.join(
 			out_plot_folder,
-			f"{database_key}_{x_axis_opts}_{acc_or_auc}_{opt}.png")
+			f"{database_key}_{x_axis_opts}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.png")
 		plt.savefig(out_plot_file)
 		return
 		X = []
@@ -845,7 +845,6 @@ class _AllRecords:
 			for group in group_pids:
 				if intersect_pids is None: intersect_pids = group_pids[group]
 				else: intersect_pids = intersect_pids.intersection(group_pids[group])
-				print(intersect_pids)
 			if intersect_pids is None or len(intersect_pids) == 0:
 				raise NotEnoughPatients("No patients that intersect between groups")
 			group_dicts_same_pid = {}
