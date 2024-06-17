@@ -101,24 +101,48 @@ class MultiInputTester:
 			divides = divides,
 			same_pids_across_groups = same_pids_across_groups
 			)
+	
 	def auc(self,ind = 0,
 						database_key = None,
 						opt = None,
 						divides = None,
-						same_pids_across_groups = False):
-		return self.pid_records.auc(ind=ind,
+						same_pids_across_groups = False,
+						save=False):
+		group_dict = self.pid_records.auc(ind=ind,
 					database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups)
+		if save:
+			out_json_folder = os.path.join(self.out_record_folder,"json_res")
+			os.makedirs(out_json_folder,exist_ok=True)
+			out_json_file = os.path.join(
+				out_json_folder,
+				f"{database_key}_{x_axis_opts}_auc_{opt}_same_pids_{same_pids_across_groups}.json")
+			with open(out_json_file,'w') as fileobj:
+				json.dump(group_dict,fileobj,indent=4)
+
+		return
+	
 	def acc(self,database_key = None,
 						opt = None,
 						divides = None,
-						same_pids_across_groups = False):
-		return self.pid_records.acc(database_key=database_key,
+						same_pids_across_groups = False,
+						save = False):
+		group_dict = self.pid_records.acc(database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups)
+		if save:
+			out_json_folder = os.path.join(self.out_record_folder,"json_res")
+			os.makedirs(out_json_folder,exist_ok=True)
+			out_json_file = os.path.join(
+				out_json_folder,
+				f"{database_key}_{x_axis_opts}_acc_{opt}_same_pids_{same_pids_across_groups}.json")
+			with open(out_json_file,'w') as fileobj:
+				json.dump(group_dict,fileobj,indent=4)
+
+		return
 	def plot(self,
 			ind = 0,
 			x_axis_opts = "images",
@@ -929,8 +953,7 @@ class _AllRecords:
 				database_key : str = None,
 				opt : str = None,
 				divides : list = None,
-				same_pids_across_groups : bool = False,
-				save : bool = False) -> dict:
+				same_pids_across_groups : bool = False) -> dict:
 		"""Returns the AUROC of the test
 		
 		Args:
@@ -957,15 +980,6 @@ class _AllRecords:
 				group_aucs[group] = {"auc": auc_,
 									"images":image_count,
 									"patients":patient_count}
-		if save:
-			out_json_folder = os.path.join(self.out_record_folder,"json_res")
-			os.makedirs(out_json_folder,exist_ok=True)
-			out_json_file = os.path.join(
-				out_json_folder,
-				f"{database_key}_{x_axis_opts}_auc_{opt}_same_pids_{same_pids_across_groups}.json")
-			with open(out_json_file,'w') as fileobj:
-				json.dump(group_aucs,fileobj,indent=4)
-
 		return group_aucs
 	
 	def acc(self,
@@ -1000,14 +1014,6 @@ class _AllRecords:
 			group_accs[group] = {"acc":acc,
 								"images":image_count,
 								"patients":patient_count}
-		if save:
-			out_json_folder = os.path.join(self.out_record_folder,"json_res")
-			os.makedirs(out_json_folder,exist_ok=True)
-			out_json_file = os.path.join(
-				out_json_folder,
-				f"{database_key}_{x_axis_opts}_acc_{opt}_same_pids_{same_pids_across_groups}.json")
-			with open(out_json_file,'w') as fileobj:
-				json.dump(group_accs,fileobj,indent=4)
 		return group_accs
 	
 	def get_group_auc(self,group,mv_limit=0.5):
