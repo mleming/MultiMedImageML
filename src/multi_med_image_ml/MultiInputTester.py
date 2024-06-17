@@ -924,12 +924,25 @@ class _AllRecords:
 		
 		return group_stat
 	
-	def auc(self,ind = 0,
-						database_key = None,
-						opt = None,
-						divides = None,
-						same_pids_across_groups = False,
-						save=False):
+	def auc(self,
+				ind : int = 0,
+				database_key : str = None,
+				opt : str = None,
+				divides : list = None,
+				same_pids_across_groups : bool = False,
+				save : bool = False) -> dict:
+		"""Returns the AUROC of the test
+		
+		Args:
+			database_key (str): If set, returns the name of the variable to group by. For example, "Sex" would return the accuracy of male and female classification separately (default None)
+			opt (str): Type of group to classify by. Can be opt "age_dem" (with and without age encoding and demographic inputs), "name_num" (Number of images input),"name_mod" (name of each group),"name_num_group" (number of modalities input into one classification),"diff_date" (span of dates between earliest and latest image)
+			divides (list[int]): For opts that involve counting, this indicates the ranges to count
+			same_pids_across_groups (bool): For multigroup accuracy, curates a set of PIDs that are present in each group.
+			save (bool): Saves the results in a directory
+		
+		Returns:
+			dictionary of groups, AUROC for that group, number of patients and images in that group
+		"""
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
 						opt=opt,divides=divides,
@@ -956,11 +969,24 @@ class _AllRecords:
 		return group_aucs
 	
 	def acc(self,
-				database_key = None,
-				opt = None,
-				divides = None,
-				same_pids_across_groups = False,
-				save = False):
+				database_key : str = None,
+				opt : str = None,
+				divides : list = None,
+				same_pids_across_groups : bool = False,
+				save : bool = False) -> dict:
+		"""Returns the accuracy of the test
+		
+		Args:
+			database_key (str): If set, returns the name of the variable to group by. For example, "Sex" would return the accuracy of male and female classification separately (default None)
+			opt (str): Type of group to classify by. Can be opt "age_dem" (with and without age encoding and demographic inputs), "name_num" (Number of images input),"name_mod" (name of each group),"name_num_group" (number of modalities input into one classification),"diff_date" (span of dates between earliest and latest image)
+			divides (list[int]): For opts that involve counting, this indicates the ranges to count
+			same_pids_across_groups (bool): For multigroup accuracy, curates a set of PIDs that are present in each group.
+			save (bool): Saves the results in a directory
+		
+		Returns:
+			dictionary of groups, AUROC for that group, number of patients and images in that group
+		"""
+		
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
 						opt = opt,
