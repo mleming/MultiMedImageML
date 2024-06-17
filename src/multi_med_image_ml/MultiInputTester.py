@@ -928,7 +928,8 @@ class _AllRecords:
 						database_key = None,
 						opt = None,
 						divides = None,
-						same_pids_across_groups = False):
+						same_pids_across_groups = False,
+						save=False):
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
 						opt=opt,divides=divides,
@@ -943,13 +944,23 @@ class _AllRecords:
 				group_aucs[group] = {"auc": auc_,
 									"images":image_count,
 									"patients":patient_count}
+		if save:
+			out_json_folder = os.path.join(self.out_record_folder,"json_res")
+			os.makedirs(out_json_folder,exist_ok=True)
+			out_json_file = os.path.join(
+				out_json_folder,
+				f"{database_key}_{x_axis_opts}_auc_{opt}_same_pids_{same_pids_across_groups}.json")
+			with open(out_json_file,'w') as fileobj:
+				json.dump(group_aucs,fileobj,indent=4)
+
 		return group_aucs
 	
 	def acc(self,
 				database_key = None,
 				opt = None,
 				divides = None,
-				same_pids_across_groups = False):
+				same_pids_across_groups = False,
+				save = False):
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
 						opt = opt,
@@ -963,6 +974,14 @@ class _AllRecords:
 			group_accs[group] = {"acc":acc,
 								"images":image_count,
 								"patients":patient_count}
+		if save:
+			out_json_folder = os.path.join(self.out_record_folder,"json_res")
+			os.makedirs(out_json_folder,exist_ok=True)
+			out_json_file = os.path.join(
+				out_json_folder,
+				f"{database_key}_{x_axis_opts}_acc_{opt}_same_pids_{same_pids_across_groups}.json")
+			with open(out_json_file,'w') as fileobj:
+				json.dump(group_accs,fileobj,indent=4)
 		return group_accs
 	
 	def get_group_auc(self,group,mv_limit=0.5):
