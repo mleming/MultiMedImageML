@@ -72,77 +72,39 @@ class MultiInputTester:
 		self.database = database
 		self.include_inds = include_inds
 		self.verbose = verbose
-	def plot(self,
-			ind=0,
-			database_key = None,
-			opt = None,
-			divides = None,
-			same_pids_across_groups = False,
-			x_axis_opts = "images",
-			acc_or_auc = "auc"
-		):
-		"""Plots results to a graph. Allows one to analyze individual groups.
-		
-		Args:
-			database_key (str): Variable to group by. Must not be continuous.
-			opt (str): "age_dem", "name_num","name_mod","name_num_group","diff_date"
-			divides (list): List of numbers by which certain options, like name_num, may be grouped.
-			same_pids_across_groups (bool): When analyzing across different groups, allows one to make sure all groups have the same patients (default False)
-			x_axis_opts (str): What to plot on the x axis (may be "images", "patients", or "images per patient")
-			
-		"""
-		os.makedirs(os.path.join(self.out_record_folder,"plots"),exist_ok=True)
-		self.pid_records.plot(
-			database_key = database_key,
-			ind = ind,
-			x_axis_opts = x_axis_opts,
-			acc_or_auc = acc_or_auc,
-			opt = opt,
-			divides = divides,
-			same_pids_across_groups = same_pids_across_groups
-			)
-	
-	def auc(self,ind = 0,
-						database_key = None,
-						opt = None,
-						divides = None,
-						same_pids_across_groups = False,
-						save=False):
-		group_dict = self.pid_records.auc(ind=ind,
-					database_key=database_key,
-					opt=opt,
-					divides=divides,
-					same_pids_across_groups=same_pids_across_groups)
-		if save:
-			out_json_folder = os.path.join(self.out_record_folder,"json_res")
-			os.makedirs(out_json_folder,exist_ok=True)
-			out_json_file = os.path.join(
-				out_json_folder,
-				f"{database_key}_{x_axis_opts}_auc_{opt}_same_pids_{same_pids_across_groups}.json")
-			with open(out_json_file,'w') as fileobj:
-				json.dump(group_dict,fileobj,indent=4)
+		self.grad_cam_group = {}
+		self.encoding_Xfile_record = None
+		self.encoding_record = None
 
-		return
-	
 	def acc(self,database_key = None,
 						opt = None,
 						divides = None,
 						same_pids_across_groups = False,
-						save = False):
-		group_dict = self.pid_records.acc(database_key=database_key,
+						save = False,
+						ind = 0,
+						acc_or_auc = "acc"):
+		if acc_or_auc == "auc":
+			group_dict = self.pid_records.auc(ind=ind,
+					database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups)
+		elif acc_or_auc == "acc":
+			group_dict = self.pid_records.acc(database_key=database_key,
+					opt=opt,
+					divides=divides,
+					same_pids_across_groups=same_pids_across_groups)
+		else:
+			raise Exception("Invalid arg for acc_or_auc: %s" % acc_or_auc)
 		if save:
 			out_json_folder = os.path.join(self.out_record_folder,"json_res")
 			os.makedirs(out_json_folder,exist_ok=True)
 			out_json_file = os.path.join(
 				out_json_folder,
-				f"{database_key}_{x_axis_opts}_acc_{opt}_same_pids_{same_pids_across_groups}.json")
+				f"{database_key}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.json")
 			with open(out_json_file,'w') as fileobj:
 				json.dump(group_dict,fileobj,indent=4)
-
-		return
+		return group_dict
 	def plot(self,
 			ind = 0,
 			x_axis_opts = "images",
@@ -150,28 +112,24 @@ class MultiInputTester:
 			database_key = None,
 			opt = None,
 			divides = None,
-			same_pids_across_groups = False):
-		if acc_or_auc == "acc":
-			group_set = self.acc(
-						database_key = database_key,
-						opt = opt,
-						divides = divides,
-						same_pids_across_groups = same_pids_across_groups
-					)
-		elif acc_or_auc == "auc":
-			group_set = self.auc(ind = ind,
-						database_key = database_key,
-						opt = opt,
-						divides = divides,
-						same_pids_across_groups = same_pids_across_groups
-					)
-		else:
-			raise Exception("Invalid opt: %s" % acc_or_auc)
+			same_pids_across_groups = False,
+			min_pids = 1):
+		group_set = self.acc(
+					database_key = database_key,
+					opt = opt,
+					divides = divides,
+					same_pids_across_groups = same_pids_across_groups,
+					ind=ind,
+					acc_or_auc=acc_or_auc
+				)
+		assert(group_set is not None)
 		plt.clf()
 		for group in group_set:
 			if group is None: continue
 			x = group_set[group][acc_or_auc]
 			if is_nan(x): continue
+			if group_set[group]["patients"] < min_pids:
+				continue
 			if x_axis_opts == "images_per_patient":
 				if group_set[group]["patients"] == 0:
 					y = 0
@@ -187,73 +145,14 @@ class MultiInputTester:
 		out_plot_file = os.path.join(
 			out_plot_folder,
 			f"{database_key}_{x_axis_opts}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.png")
+		xlabel = x_axis_opts.replace("_"," ").title()
+		if same_pids_across_groups:
+			xlabel = xlabel + " %s" % (group_set[group]["patients"])
+		plt.xlabel(xlabel)
+		plt.ylabel(acc_or_auc.upper())
 		plt.savefig(out_plot_file)
-		return
-		X = []
-		Y = []
-		L = []
-		C = []
-		num_skips = 0
-		for l in self.group_set:
-			if self.use_auc:
-				val = self.get_group_auc(l,mv_limit=self.mv_limit)
-			else:
-				val = self.get_group_acc(l,mv_limit=self.mv_limit)
-			if val == -1:
-				#print("Skipping %s" % l)
-				continue
-			x,n_patients,n_images,portion = val
-			if n_patients < self.min_pids and self.min_pids > -1:
-				num_skips += 1
-				continue
-			L.append(l)
-			X.append(x)
-			C.append(portion)
-			if self.x_axis_opts == "images":
-				Y.append(n_images)
-				xlabel = "Num Images" + (" (%d total patients)" % n_patients) \
-					if self.same_patients else ""
-			elif self.x_axis_opts == "patients":
-				Y.append(n_patients)
-				xlabel = "Num Patients"
-			elif self.x_axis_opts == "images_per_patient":
-				Y.append(float(n_images)/n_patients)
-				xlabel = "Mean images per patient"
-			else:
-				raise Exception("Nothing")
-		if num_skips == len(self.group_set):
-			raise Exception(
-				"Not enough patients in any one group with %d minimum PIDs" % \
-					self.min_pids)
-		for x,y,l,c in zip(X,Y,L,C):
-			if np.isnan(x): continue
-			if self.verbose:
-				print("{l:s}: {x:.4f} {y:.4f}".format(c=c,y=y,l=l,x=x))
-			#plt.scatter(y,x,c=c,cmap=plt.cm.viridis)
-			plt.text(y,x,l[:10])#.replace("_","\n"),rotation=0)
-		if self.include_cbar:
-			sc = plt.scatter(np.array(Y),np.array(X),c=np.array(C),
-				cmap=plt.cm.viridis,vmin=0,vmax=1)
-			plt.colorbar(sc,label=cbar_label)
-		else:
-			plt.scatter(np.array(Y),np.array(X))
-		plt.title(title)
-		if self.use_auc:
-			plt.ylabel("AUC")
-		else:
-			plt.ylabel("Accuracy")
-		try:
-			plt.xlabel(self.xlabel)
-		except:
-			pass
-			#print("No data in %s" % self.name)
-			#exit()
-		if output is None:
-			plt.show()
-		else:
-			plt.savefig(output)
-	
-	def loop(self,pr: BatchRecord):
+
+	def loop(self,pr: BatchRecord,record_encoding=False):
 		"""Tests one input and saves it.
 		
 		Args:
@@ -262,7 +161,9 @@ class MultiInputTester:
 		"""
 		y_pred = self.model(pr,
 			return_regress = True
-			)
+			,record_encoding=record_encoding)
+		if record_encoding:
+			self.record_encodings(pr.get_X_files())
 		if isinstance(y_pred,tuple):
 			y_pred,c_pred = y_pred
 		else:
@@ -339,19 +240,141 @@ class MultiInputTester:
 						age_encode=age_encode,static_inputs=static_inputs)
 		#if self.same_patients:
 		#	self.pid_records.merge_group_pids()
+
+	def read_encodings(self):
+		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
+		if not os.path.isdir(out_encoding_folder):
+			return
+		out_encoding_file = os.path.join(out_encoding_folder,"encodings.json")
+		if not os.path.isfile(out_encoding_file): return
+		with open(out_encoding_file,'r') as fileobj:
+			self.encoding_record = json.load(fileobj)
+		for X_file in self.encoding_record:
+			self.encoding_record[X_file] = np.array(
+				self.encoding_record[X_file])
+		
+	def record_encodings(self,X_files):
+		if self.encoding_record is None:
+			self.encoding_record = {}
+		assert(len(X_files) == self.model.saved_encoding.shape[0])
+		for i,X_file in enumerate(X_files):
+			self.encoding_record[X_file] = \
+				np.squeeze(self.model.saved_encoding[i,...])
+
+	def save_encodings(self):
+		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
+		os.makedirs(out_encoding_folder,exist_ok=True)
+		out_encoding_file = os.path.join(out_encoding_folder,"encodings.json")
+		
+		for X_file in self.encoding_record:
+			self.encoding_record[X_file] = \
+				[float(_) for _ in self.encoding_record[X_file]]
+		with open(out_encoding_file,'w') as fileobj:
+			json.dump(self.encoding_record,fileobj)
+		for X_file in self.encoding_record:
+			self.encoding_record[X_file] = np.array(
+						self.encoding_record[X_file])
+	
+	def _get_encoding_arrs(self):
+		X_files = []
+		encode_arr = []
+		for X_file in self.encoding_record:
+			X_files.append(X_file)
+			encode_arr.append(self.encoding_record[X_file])
+		encode_arr = np.array(encode_arr)
+		return X_files,encode_arr
+	def _get_ml_model(self,encode_arr,ml_model):
+		if ml_model == "pca":
+			from sklearn.decomposition import PCA
+			pca = PCA(n_components = 2)
+			encode_2dim = pca.fit_transform(encode_arr)
+			return encode_2dim
+		elif ml_model == "autoencoder":
+			from .models import AutoEncoder1D
+			ae = AutoEncoder1D(encode_arr.shape[1])
+			loss_fn = nn.MSELoss()
+			optimizer = torch.optim.Adam(ae.parameters(),lr=1e-5)
+			encode_arr = np.expand_dims(encode_arr,axis=1)
+			for j in range(20):
+				running_loss = 0
+				for i in range(encode_arr.shape[0] // 64):
+					optimizer.zero_grad()
+					batch = torch.tensor(encode_arr[i*64:(i+1)*64,:,:]).float()
+					latents,outputs = ae(batch)
+					loss = loss_fn(outputs,batch)
+					loss.backward()
+					optimizer.step()
+					running_loss += loss.item()
+				print("%d: Loss: %.6f" % (j,float(running_loss) / (encode_arr.shape[0] // 64)))
+			encode_2dim,_ = ae(torch.tensor(encode_arr).float())
+			encode_2dim = encode_2dim.detach().cpu().numpy()
+			encode_2dim = np.squeeze(encode_2dim)
+			return encode_2dim
+		else:
+			raise Exception("Invalid option: %s" % ml_model)
+	def pca_analysis(self,database_keys:list,ml_model="pca"):
+		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
+		X_files,encode_arr = self._get_encoding_arrs()
+		encode_2dim = self._get_ml_model(encode_arr,ml_model)
+		xs,ys = encode_2dim[:,0],encode_2dim[:,1]
+		for database_key in database_keys:
+			if "/" in database_key:
+				database_key,alt = database_key.split("/")
+			else:
+				alt = None
+			out_encoding_plot = os.path.join(out_encoding_folder,
+				f"{database_key}_encoding_plot.png")
+			var_vals = [self.database.loc_val(X_file,database_key) \
+							for X_file in X_files]
+			for i,val in enumerate(var_vals):
+				if is_nan(val) and alt is not None:
+					var_vals[i] = self.database.loc_val(X_files[i],alt)
+			var_vals = list(map(lambda k : "None" if is_nan(k) else k,var_vals))
+			plt.clf()
+			fig,ax = plt.subplots()
+			colors = ['red','blue','green','purple',
+					'chocolate','papayawhip','palegreen','goldenrod',
+					'mediumaquamarine','maroon','slategrey','lightgreen',
+					'darkseagreen','teal','beige','olive','deepskyblue',
+					'mediumorchid','crimson','navy','indigo','azure',
+					'skyblue','deepskyblue','darkolivegreen','yellow',
+					'chartreuse','tomato']
+			uvals = sorted(list(np.unique(var_vals)),key=lambda k: var_vals.count(k),reverse=True)
+			for i,val in enumerate(uvals):
+				ix = np.where(np.array(var_vals) == val)
+				x_ = np.array(xs)[ix]
+				y_ = np.array(ys)[ix]
+				ind = uvals.index(val)
+				color = colors[ind % len(colors)]
+				ax.scatter(x_,y_,c = color,alpha=0.5,label=val)
+			if len(uvals) < len(colors):
+				ax.legend()
+			if ml_model == "pca":
+				plt.xlabel("Principal Component 1")
+				plt.ylabel("Principal Component 2")
+			elif ml_model == "autoencoder":
+				plt.xlabel("Latent Dim 1")
+				plt.ylabel("Latent Dim 2")
+			plt.title(f"{database_key}")
+			plt.savefig(out_encoding_plot)
+
 	def _json_title_parse(self,json_file):
 		return "_".join(
 				os.path.basename(json_file).replace('.json','').split("_")[:-1]
 			)
+
 	def grad_cam(self,pr: BatchRecord,
 		add_symlink: bool = True,
-		grad_layer: int = 7) -> torch.Tensor:
+		grad_layer: int = 7,
+		save : bool = True,
+		database_key : str = None) -> torch.Tensor:
 		"""Outputs a gradient class activation map for the input record
 		
 		Args:
 			pr (BatchRecord): Image batch to apply Grad-Cam to
 			add_symlink (bool): If true, adds a symbolic link to the original image in the same folder as the grad-cam is stored in (default True)
 			grad_layer (int):  (default 7)
+			save (bool): Save the output to the results folder (default True)
 		"""
 		self.model.grad_layer = grad_layer
 		if pr.image_records[0].Y_dim[0] > 1:
@@ -390,17 +413,60 @@ class MultiInputTester:
 			im = pr.image_records[i]
 			
 			npsqueeze = np.squeeze(t[i,...])
-			npsqueeze = resize_np(npsqueeze,im.X_dim)
-			out_folder = os.path.join(self.out_record_folder,
-							"grads",im.group_by)
-			os.makedirs(out_folder,exist_ok=True)
-			bname = os.path.splitext(os.path.basename(im.npy_file))[0]
-			out_name = f"{bname}_grad.npy"
-			orig_name = f"{bname}_orig.npy"
-			np.save(os.path.join(out_folder,out_name),npsqueeze)
-			if add_symlink and not os.path.isfile(os.path.join(out_folder,orig_name)):
-				os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
+			if database_key is not None:
+				if database_key == "all":
+					if "all" not in self.grad_cam_group:
+						self.grad_cam_group["all"] = npsqueeze
+					else:
+						self.grad_cam_group["all"] = \
+							self.grad_cam_group["all"] + npsqueeze
+				else:
+					if database_key not in self.grad_cam_group:
+						self.grad_cam_group[database_key] = {}
+					group = self.database.loc_val(im.npy_file,database_key)
+					if group is None: continue
+					assert(group is not None)
+					if group not in self.grad_cam_group[database_key]:
+						self.grad_cam_group[database_key][group] = npsqueeze
+					else:
+						self.grad_cam_group[database_key][group] = \
+							self.grad_cam_group[database_key][group] + npsqueeze
+
+			if save:
+				npsqueeze = resize_np(npsqueeze,im.X_dim)
+				out_folder = os.path.join(self.out_record_folder,
+								"grads",im.group_by)
+				os.makedirs(out_folder,exist_ok=True)
+				bname = os.path.splitext(os.path.basename(im.npy_file))[0]
+				out_name = f"{bname}_grad.npy"
+				orig_name = f"{bname}_orig.npy"
+				np.save(os.path.join(out_folder,out_name),npsqueeze)
+				if add_symlink and not os.path.isfile(
+						os.path.join(out_folder,orig_name)):
+					os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
 		return t
+	def out_grad_cam_groups(self,prefix=None):
+		if prefix is None:
+			out_folder = os.path.join(self.out_record_folder,"grads")
+		else:
+			out_folder = os.path.join(self.out_record_folder,f"{prefix}_grads")
+		for database_key in self.grad_cam_group:
+			if database_key == "all":
+				out_all_folder = os.path.join(out_folder,"all")
+				os.makedirs(out_all_folder,exist_ok=True)
+				npsqueeze = self.grad_cam_group["all"]
+				npsqueeze = npsqueeze - npsqueeze.min()
+				npsqueeze = npsqueeze / npsqueeze.max()
+				np.save(os.path.join(out_all_folder,"all.npy"),npsqueeze)
+			else:
+				out_all_folder = os.path.join(out_folder,database_key)
+				os.makedirs(out_all_folder,exist_ok=True)
+				for group in self.grad_cam_group[database_key]:
+					npsqueeze = self.grad_cam_group[database_key][group]
+					npsqueeze = npsqueeze - npsqueeze.min()
+					npsqueeze = npsqueeze / npsqueeze.max()
+					np.save(os.path.join(out_all_folder,f"{group}.npy"),
+						npsqueeze)
 
 class NotEnoughPatients(Exception):
 	def __init__(self, message):
@@ -1014,6 +1080,7 @@ class _AllRecords:
 			group_accs[group] = {"acc":acc,
 								"images":image_count,
 								"patients":patient_count}
+		assert(group_accs is not None)
 		return group_accs
 	
 	def get_group_auc(self,group,mv_limit=0.5):

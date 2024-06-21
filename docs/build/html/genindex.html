@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
 
-    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 --><title>Index - Multi-Input Medical Image ML Toolkit 0.0.23 documentation</title>
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 --><title>Index - Multi-Input Medical Image ML Toolkit 0.0.25 documentation</title>
 <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=387cc868" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
@@ -177,7 +177,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.23 documentation</div></a>
+      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.25 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -201,7 +201,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.23 documentation</span>
+  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.25 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -272,9 +272,9 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.AllRecords">AllRecords (class in multi_med_image_ml.Records)</a>
 </li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.auc">auc() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
-</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MedImageLoader.MedImageLoader.augment">augment (multi_med_image_ml.MedImageLoader.MedImageLoader attribute)</a>
+</li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.AutoEncoder1D">AutoEncoder1D (class in multi_med_image_ml.models)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -330,8 +330,6 @@
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.cache">(multi_med_image_ml.Records.ImageRecord attribute)</a>
 </li>
         </ul></li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.cached_record">cached_record (multi_med_image_ml.Records.ImageRecord attribute)</a>
-</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MedImageLoader.MedImageLoader.channels_first">channels_first (multi_med_image_ml.MedImageLoader.MedImageLoader attribute)</a>
 
         <ul>
@@ -352,10 +350,10 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Classifier">Classifier (class in multi_med_image_ml.models)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.classifier">classifier (multi_med_image_ml.models.MultiInputModule attribute)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.classifier_freeze">classifier_freeze() (multi_med_image_ml.models.MultiInputModule method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.classifier_parameters">classifier_parameters() (multi_med_image_ml.models.MultiInputModule method)</a>
@@ -418,10 +416,12 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder">Decoder (class in multi_med_image_ml.models)</a>
 </li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.utils.determine_random_partition">determine_random_partition() (in module multi_med_image_ml.utils)</a>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder1D">Decoder1D (class in multi_med_image_ml.models)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.utils.determine_random_partition">determine_random_partition() (in module multi_med_image_ml.utils)</a>
+</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.utils.determine_random_partition2">determine_random_partition2() (in module multi_med_image_ml.utils)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.device">device (multi_med_image_ml.models.MultiInputModule attribute)</a>
@@ -460,6 +460,8 @@
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Encoder1D">Encoder1D (class in multi_med_image_ml.models)</a>
+</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.EnsembleModel">EnsembleModel (class in multi_med_image_ml.models)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.utils.equal_terms">equal_terms() (in module multi_med_image_ml.utils)</a>
@@ -488,12 +490,18 @@
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.filename">(multi_med_image_ml.Records.ImageRecord attribute)</a>
 </li>
         </ul></li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Classifier.forward">forward() (multi_med_image_ml.models.Classifier method)</a>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.AutoEncoder1D.forward">forward() (multi_med_image_ml.models.AutoEncoder1D method)</a>
 
         <ul>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Classifier.forward">(multi_med_image_ml.models.Classifier method)</a>
+</li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder.forward">(multi_med_image_ml.models.Decoder method)</a>
 </li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder1D.forward">(multi_med_image_ml.models.Decoder1D method)</a>
+</li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Encoder.forward">(multi_med_image_ml.models.Encoder method)</a>
+</li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Encoder1D.forward">(multi_med_image_ml.models.Encoder1D method)</a>
 </li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.EnsembleModel.forward">(multi_med_image_ml.models.EnsembleModel method)</a>
 </li>
@@ -502,6 +510,8 @@
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Regressor.forward">(multi_med_image_ml.models.Regressor method)</a>
 </li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Reshape.forward">(multi_med_image_ml.models.Reshape method)</a>
+</li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.VAE.forward">(multi_med_image_ml.models.VAE method)</a>
 </li>
         </ul></li>
     </ul></td>
@@ -925,7 +935,7 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.NotEnoughPatients">NotEnoughPatients</a>
 </li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.npy_file">npy_file (multi_med_image_ml.Records.ImageRecord attribute)</a>
+        <li><a href="multi_med_image_ml.html#id0">npy_file (multi_med_image_ml.Records.ImageRecord attribute)</a>, <a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.npy_file">[1]</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.FileLookup.npy_file">npy_file() (multi_med_image_ml.Records.FileLookup method)</a>
 </li>
@@ -945,11 +955,13 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer.optimizer">optimizer (multi_med_image_ml.MultiInputTrainer.MultiInputTrainer attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTrainer.MultiInputTrainer.optimizer_reg">optimizer_reg (multi_med_image_ml.MultiInputTrainer.MultiInputTrainer attribute)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.out_dataframe">out_dataframe() (multi_med_image_ml.DataBaseWrapper.DataBaseWrapper method)</a>
+</li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.out_grad_cam_groups">out_grad_cam_groups() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.out_record_folder">out_record_folder (multi_med_image_ml.MultiInputTester.MultiInputTester attribute)</a>
 </li>
@@ -981,6 +993,8 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.PatientRecord">PatientRecord (class in multi_med_image_ml.Records)</a>
 </li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.pca_analysis">pca_analysis() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
+</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.PatientRecord.pid">pid (multi_med_image_ml.Records.PatientRecord attribute)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.plot">plot() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
@@ -999,6 +1013,8 @@
   <h2>R</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.read_encodings">read_encodings() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
+</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.read_image">read_image() (multi_med_image_ml.Records.ImageRecord method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json">read_json() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
@@ -1011,6 +1027,8 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MedImageLoader.MedImageLoader.record">record() (multi_med_image_ml.MedImageLoader.MedImageLoader method)</a>
 </li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.record_encodings">record_encodings() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Regressor">Regressor (class in multi_med_image_ml.models)</a>
@@ -1020,6 +1038,8 @@
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.regressor_freeze">regressor_freeze() (multi_med_image_ml.models.MultiInputModule method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.MultiInputModule.remove_uncertain">remove_uncertain (multi_med_image_ml.models.MultiInputModule attribute)</a>
+</li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.VAE.reset_parameters">reset_parameters() (multi_med_image_ml.models.VAE method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Reshape">Reshape (class in multi_med_image_ml.models)</a>
 </li>
@@ -1036,6 +1056,8 @@
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.same_patients">same_patients (multi_med_image_ml.MultiInputTester.MultiInputTester attribute)</a>
+</li>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.save_encodings">save_encodings() (multi_med_image_ml.MultiInputTester.MultiInputTester method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.utils.save_image">save_image() (in module multi_med_image_ml.utils)</a>
 </li>
@@ -1095,18 +1117,24 @@
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.Records.ImageRecord.times_called">times_called (multi_med_image_ml.Records.ImageRecord attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MedImageLoader.MedImageLoader.tl">tl() (multi_med_image_ml.MedImageLoader.MedImageLoader method)</a>
 </li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.MultiInputTester.MultiInputTester.top_not_mean">top_not_mean (multi_med_image_ml.MultiInputTester.MultiInputTester attribute)</a>
 </li>
-        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Classifier.training">training (multi_med_image_ml.models.Classifier attribute)</a>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.AutoEncoder1D.training">training (multi_med_image_ml.models.AutoEncoder1D attribute)</a>
 
         <ul>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Classifier.training">(multi_med_image_ml.models.Classifier attribute)</a>
+</li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder.training">(multi_med_image_ml.models.Decoder attribute)</a>
 </li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Decoder1D.training">(multi_med_image_ml.models.Decoder1D attribute)</a>
+</li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Encoder.training">(multi_med_image_ml.models.Encoder attribute)</a>
+</li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Encoder1D.training">(multi_med_image_ml.models.Encoder1D attribute)</a>
 </li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.EnsembleModel.training">(multi_med_image_ml.models.EnsembleModel attribute)</a>
 </li>
@@ -1115,6 +1143,8 @@
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Regressor.training">(multi_med_image_ml.models.Regressor attribute)</a>
 </li>
           <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.Reshape.training">(multi_med_image_ml.models.Reshape attribute)</a>
+</li>
+          <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.VAE.training">(multi_med_image_ml.models.VAE attribute)</a>
 </li>
         </ul></li>
     </ul></td>
@@ -1135,6 +1165,8 @@
   <h2>V</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="multi_med_image_ml.html#multi_med_image_ml.models.VAE">VAE (class in multi_med_image_ml.models)</a>
+</li>
         <li><a href="multi_med_image_ml.html#multi_med_image_ml.DataBaseWrapper.DataBaseWrapper.val_ranges">val_ranges (multi_med_image_ml.DataBaseWrapper.DataBaseWrapper attribute)</a>
 
         <ul>
@@ -1237,7 +1269,7 @@
       
     </aside>
   </div>
-</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4ab1abf8"></script>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2540bf2c"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/scripts/furo.js?v=4e2eecee"></script>

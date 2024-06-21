@@ -425,7 +425,8 @@ class MultiInputModule(nn.Module):
 				return_regress = False,
 				return_encoded = False,
 				encoded_input = False,
-				grad_eval = False):
+				grad_eval = False,
+				record_encoding = False):
 		"""Puts image or BatchRecord through model and predicts a value.
 		
 		Args:
@@ -436,7 +437,7 @@ class MultiInputModule(nn.Module):
 			return_regress (bool): If True, returns the confound prediction array as a second value (default False)
 			return encoded (bool): If True, returns the encoded values of the images (default False)
 			encoded_input (bool): Indicator that X is input that's already been encoded and can be put straight into the classifier (default False)
-		
+			record_encoding (bool): If set, saves the most recent encoding as a numpy file in the variable saved_encoding
 		"""
 		use_regression = hasattr(self,'regressor') and \
 			(self.regressor is not None) and \
@@ -497,7 +498,8 @@ class MultiInputModule(nn.Module):
 					x = self.encoder.encoder[self.grad_layer:](x)
 				else:
 					x = self.encoder(x)
-			
+			if record_encoding:
+				self.saved_encoding = x.cpu().detach().numpy()
 			if hasattr(self,'remove_uncertain'):
 				if self.remove_uncertain:
 					if self.record_training_sample:
@@ -616,3 +618,134 @@ class EnsembleModel(nn.Module):
 		new_output = torch.cat(new_output,dim=3)
 		new_hidden = torch.cat(new_hidden,dim=3)
 		return new_output,new_hidden
+
+class Encoder1D(nn.Module):
+	def __init__(self,input_dim,output_dim,conv=False):
+		super(Encoder1D,self).__init__()
+		base_feat = 1024
+		if conv:
+			self.encoder = nn.Sequential(
+				Reshape([-1,1,1,input_dim]),
+				nn.Conv2d(1,base_feat,kernel_size=(1,input_dim)),
+				nn.LeakyReLU(),
+				Reshape([-1,1,base_feat]),
+				nn.BatchNorm1d(1,affine=True),
+				Reshape([-1,base_feat]),
+				nn.Linear(base_feat,output_dim),
+				
+			)
+		else:
+			self.encoder = nn.Sequential(
+				nn.Linear(input_dim,base_feat),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(base_feat,base_feat),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(base_feat,base_feat),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(base_feat,input_dim//2),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(in_features = input_dim//2, out_features = input_dim//4),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+				
+				nn.Linear(in_features = input_dim//4, out_features = input_dim//8),
+				nn.LeakyReLU(),
+				
+				nn.Linear(in_features = input_dim//8, out_features = output_dim),
+			)
+	def forward(self,x):
+		x = self.encoder(x)
+		return x
+
+
+class Decoder1D(nn.Module):
+	def __init__(self,input_dim,output_dim,conv=False):
+		super(Decoder1D, self).__init__()
+		base_feat = 1024
+		if conv:
+			self.decoder = nn.Sequential(
+				nn.Linear(output_dim,base_feat),
+				nn.LeakyReLU(),
+				Reshape([-1,1,base_feat]),
+				nn.BatchNorm1d(1,affine=True),
+				Reshape([-1,base_feat,1]),
+				nn.ConvTranspose1d(base_feat,1,kernel_size=input_dim)
+			)
+		else:
+			self.decoder = nn.Sequential(
+				nn.Linear(in_features = output_dim,out_features = input_dim//8),
+
+				nn.LeakyReLU(),
+				nn.Linear(in_features = input_dim//8,out_features = input_dim//4),
+				nn.LeakyReLU(),
+
+				nn.BatchNorm1d(1,affine=True),
+				nn.Linear(in_features = input_dim//4,out_features = base_feat),
+				nn.LeakyReLU(),
+					
+				nn.Linear(base_feat,base_feat),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(base_feat,base_feat),
+				nn.LeakyReLU(),
+				nn.BatchNorm1d(1,affine=True),
+
+				nn.Linear(in_features = base_feat,out_features = input_dim),
+			)
+	def forward(self,x):
+		x = self.decoder(x)
+		return x
+		
+class VAE(nn.Module):
+	def __init__(self, input_dim,latent_dim=2,device=torch.device('cpu')):
+		super(VAE, self).__init__()
+		self.device = device
+		self.latent_dim = latent_dim
+		self.z_mean = nn.Linear(64, latent_dim)
+		self.z_log_sigma = nn.Linear(64, latent_dim)
+		#self.epsilon = torch.normal(size=(1, latent_dim), mean=0, std=1.0,
+		#	device=self.device)
+		self.epsilon = torch.distributions.Normal(0, 1)
+		self.epsilon.loc = self.epsilon.loc.cuda(device)
+		self.epsilon.scale = self.epsilon.scale.cuda(device)
+		self.encoder = Encoder1D(input_dim,64)
+		self.decoder = Decoder1D(input_dim,latent_dim)
+		
+	#	self.reset_parameters()
+	  
+	def reset_parameters(self):
+		for weight in self.parameters():
+			stdv = 1.0 / math.sqrt(weight.size(0))
+			torch.nn.init.uniform_(weight, -stdv, stdv)
+
+	def forward(self, x):
+		x = self.encoder(x)
+		x = torch.flatten(x, start_dim=1)
+		z_mean = self.z_mean(x)
+		z_log_sigma = self.z_log_sigma(x)
+		z = z_mean + (z_log_sigma.exp()*self.epsilon.sample(z_mean.shape))
+		#z = nn.functional.sigmoid(z)
+		y = self.decoder(z)
+		self.kl = (z_mean**2 + z_log_sigma.exp()**2 - z_log_sigma - 0.5).sum()
+		return y,z, z_mean, z_log_sigma
+
+class AutoEncoder1D(nn.Module):
+	def __init__(self,input_dim,latent_dim=2,device='cpu'):
+		super(AutoEncoder1D,self).__init__()
+		
+		self.encoder = Encoder1D(input_dim,latent_dim)#.cuda(device)
+		self.decoder = Decoder1D(input_dim,latent_dim)#.cuda(device)
+		
+	def forward(self,x):
+		latent = self.encoder(x)
+		x = self.decoder(latent)
+		return latent,x

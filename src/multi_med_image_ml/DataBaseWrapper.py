@@ -273,7 +273,7 @@ class DataBaseWrapper:
 				if not is_nan(val):
 					break
 		return val
-
+	
 	def get_ID(self,npy_file: str) -> str:
 		"""Returns the Patient ID, if present in the database. Attempts to 
 		guess it using the keys 'PatientID' and 'Patient ID'
@@ -287,10 +287,11 @@ class DataBaseWrapper:
 		
 		id = self._get_val(npy_file,["PatientID","Patient ID"])
 		return id
+	
 	def parse_date(self,d,date_format="%Y-%m-%d %H:%M:%S"):
 		"""Parses the date string"""
 		
-		if is_nan(d,inc_null_str=True):
+		if is_nan(d,inc_null_str=True) or d == "":
 			return datetime.datetime(year=1970,month=1,day=1)
 		elif is_float(d):
 			return dateutil.parser.parse(str(d))

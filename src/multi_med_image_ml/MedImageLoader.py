@@ -77,11 +77,11 @@ class MedImageLoader:
 			C_dim = (16,32),
 			return_obj = False,
 			channels_first = True,
-			recycle=True,
 			gpu_ids = "",
 			save_ram = True,
 			precedence = [],
-			n_dyn_inputs=14):
+			n_dyn_inputs=14,
+			verbose = False):
 		self.channels_first = channels_first
 		self.image_folders = image_folders
 		self.augment = augment
@@ -102,11 +102,10 @@ class MedImageLoader:
 		self.gpu_ids = gpu_ids
 		self.save_ram = save_ram
 		self.n_dyn_inputs = n_dyn_inputs
-
-		# If set to true, restacks images every time via the data 
-		# matching function. Best for very large and imbalanced datasets
-		self.recycle=recycle
+		self.verbose = verbose
 		
+		if self.verbose:
+			print("Checking key to filename conversion function")
 		check_key_to_filename(key_to_filename)
 
 		# Stores images so that they aren't repeated in different stacks
@@ -132,6 +131,9 @@ class MedImageLoader:
 				self.pandas_cache,
 				"database_%s.pkl" % get_dim_str(X_dim=self.X_dim))
 		
+		if self.verbose:
+			print("Initializing database wrapper %s" % self.database_file)
+		
 		self.database = DataBaseWrapper(
 					filename=self.database_file,
 					labels=self.label,
@@ -151,7 +153,7 @@ class MedImageLoader:
 			self.mode = "iterate"
 		
 		# For outputting the records of files that were read in
-		self.file_record_name = file_record_name 
+		self.file_record_name = file_record_name
 		if self.file_record_name is not None:
 			self.file_record = {}
 			fd = os.path.join(wd,'json','dataloader_records')
@@ -174,16 +176,22 @@ class MedImageLoader:
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
 		self.index = 0
+		if self.verbose:
+			print("Loading image stack")
 		self.load_image_stack()
+		
 	def build_pandas_database(self):
 		"""Builds up the entire Pandas DataFrame from the filesystem in one go.
 		May take a while."""
-		
+		if self.verbose:
+			print("Building pandas database")
 		assert(self.database is not None)
 		assert(not self._pickle_input())
 		old_mode = self.mode
 		self.mode = "iterate"
 		self._load_list_stack()
+		if self.verbose:
+			print("len(self.all_records.image_dict): %d" % (len(self.all_records.image_dict)))
 		
 		for i,filename in enumerate(self.all_records.image_dict):
 			im = self.all_records.get(filename)
@@ -191,7 +199,9 @@ class MedImageLoader:
 				try:
 					im.get_X()
 					im.clear_image()
-				except ImageFileError:
+				except (ImageFileError,FileNotFoundError) as e:
+					if self.verbose:
+						print("Failed to load %s" % filename)
 					continue
 			if i % 100 == 0:
 				self.database.out_dataframe()
@@ -209,7 +219,10 @@ class MedImageLoader:
 		if tl not in self.file_list_dict:
 			self.file_list_dict[tl] = []
 		return tl
+	
 	def get_file_list(self):
+		
+		
 		if self._pickle_input() and self.tl() == "Folder":
 			return [[str(_) for _ in self.database.get_file_list()]]
 		if self.mode == "iterate":
@@ -222,7 +235,7 @@ class MedImageLoader:
 				for img in self.image_folders:
 					flist = get_file_list(img)
 					flist_set = set(flist)
-					if len(flist_set.intersection(duplicate_test))>0:
+					if len(flist_set.intersection(duplicate_test)) > 0:
 						raise Exception(
 							"Intersecting files found between labels"
 							)
@@ -246,7 +259,10 @@ class MedImageLoader:
 		else:
 			raise Exception("Invalid mode: %s" % self.mode)
 	def _load_list_stack(self):
-		X_files = self.get_file_list() 
+		X_files = self.get_file_list()
+		if self.verbose:
+			print("X_files loaded: %d" % len(X_files))
+			print([len(_) for _ in X_files])
 		for i,filename_list in enumerate(X_files):
 			for j,filename in enumerate(filename_list):
 				if self.all_records.has(filename):
@@ -254,7 +270,7 @@ class MedImageLoader:
 				else:
 					X_files[i][j] = ImageRecord(filename,
 								X_dim=self.X_dim,
-								y_nums=[i] if len(X_files) == 1 else None,
+								y_nums=[i] if self.tl() == "Folder" else None,
 								Y_dim = self.Y_dim,
 								C_dim = self.C_dim,
 								dtype=self.dtype,
@@ -262,6 +278,10 @@ class MedImageLoader:
 								cache=self.cache,
 								static_inputs = self.static_inputs)
 					self.all_records.add(filename, X_files[i][j])
+		if self.verbose:
+			print("Loading list stack")
+			print("X_files loaded: %d" % len(X_files))
+			print([len(_) for _ in X_files])
 		return X_files
 	def load_image_stack(self):
 		"""Loads a stack of images to an internal queue"""
@@ -271,16 +291,26 @@ class MedImageLoader:
 			self.file_list_dict[self.tl()] = []
 		X_files = self._load_list_stack()
 		if self.batch_by_pid:
+			if self.verbose:
+				print("Load image stack: Batching by PID")
 			pdicts = []
+			with_id,without_id = 0,0
 			for images in X_files:
 				pdict = {}
 				for image in images:
 					image.load_extra_info()
 					if not is_nan(image.group_by):
+						with_id += 1
 						if image.group_by not in pdict:
 							pdict[image.group_by] = []
 						pdict[image.group_by].append(image)
+					else:
+						without_id += 1
 				pdicts.append(pdict)
+			if self.verbose:
+				print("Load image stack: len(pdicts): %d" % len(pdicts))
+				print([len(pdict) for pdict in pdicts])
+				print(f"with id: {with_id}, without id: {without_id}")
 			image_record_list = []
 			for pdict in pdicts:
 				image_record_list.append([])
@@ -295,6 +325,9 @@ class MedImageLoader:
 							batch_size=self.n_dyn_inputs))
 			X_files = image_record_list
 		self.file_list_dict[self.tl()] = X_files
+		if self.verbose:
+			print("In %s loaded list of size %d" % (self.tl(),len(X_files)))
+			print([len(_) for  _ in X_files])
 	def _return_labels(self):
 		"""Whether or not labels ought to be returned or just the images"""
 		
@@ -321,6 +354,8 @@ class MedImageLoader:
 		while self.label[0] in self.zero_data_list:
 			self.label = self.label[1:] + [self.label[0]]
 	def switch_stack(self):
+		if self.verbose:
+			print("Switching stack")
 		self.label,self.rmatch_confounds = self.rmatch_confounds,self.label
 		self.file_list_dict,self.file_list_dict_hidden = \
 			self.file_list_dict_hidden,self.file_list_dict
@@ -328,7 +363,14 @@ class MedImageLoader:
 			self.match_confounds_hidden,self.match_confounds
 		self.mode,self.mode_hidden = self.mode_hidden,self.mode
 	def __next__(self):
-		if len(self) == 0: self.load_image_stack()
+		if self.verbose:
+			print("self.tl(): %s" % self.tl())
+			print("len(self.file_list_dict[self.tl()]): %d" % (len(self.file_list_dict[self.tl()])))
+			print("len(self.file_list_dict[self.tl()][0]): %d" % (len(self.file_list_dict[self.tl()][0])))
+			print("set(self.file_list_dict) : %s" % str(set(self.file_list_dict)))
+
+		if len(self) == 0:
+			self.load_image_stack()
 		if self.index > len(self):
 			self.database.out_dataframe()
 			self.index = 0
@@ -336,7 +378,7 @@ class MedImageLoader:
 			self.load_image_stack()
 			raise StopIteration
 		# Temporary measure
-		if self.index % 1000 == 0 and self.index != 0:
+		if self.index % 500 == 0 and self.index != 0:
 			self.all_records.check_mem()
 		temp = []
 		for i in range(self.batch_size):
@@ -359,9 +401,9 @@ class MedImageLoader:
 					continue
 		if len(temp) != self.batch_size:
 			print(len(temp))
-			print(temp)
 			print(self.batch_size)
-			print(self.file_list_dict)
+			#print(self.batch_size)
+			#print(self.file_list_dict)
 		assert(len(temp) == self.batch_size)
 		if self.batch_by_pid:
 			p = temp[0]

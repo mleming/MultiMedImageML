@@ -71,17 +71,22 @@ def compile_dicom_folder(dicom_folder: str,db_builder=None):
 		dicom_folder (str): Folder of interest
 		db_builder (multi_med_image_ml.DataBaseWrapper.DateBaseWrapper): Optional input for building up the database
 	"""
+	dicom_folder = os.path.realpath(dicom_folder)
 	
 	if dcm2niix_installed:
+		cwd = os.getcwd()
+		os.chdir(dicom_folder)
 		if platform_system == "Windows":
-			os.system('dcm2niix %s 2> nul' % os.path.join(dicom_folder,'*.dcm'))
+			os.system('dcm2niix *.dcm 2> nul')
 		else:
-			os.system('dcm2niix %s >/dev/null 2>&1' % os.path.join(dicom_folder,
-					'*.dcm'))
+			os.system('dcm2niix *.dcm >/dev/null 2>&1')
+		os.chdir(cwd)
 	else:
 		dicom2nifti.convert_directory(dicom_folder,dicom_folder)
 	
 	json_file = date_sorter(dicom_folder,'.json')
+	if len(json_file) == 0:
+		raise FileNotFoundError("No json file in %s" % dicom_folder)
 	json_file = json_file[-1]
 	with warnings.catch_warnings():
 		warnings.simplefilter("ignore")
@@ -106,7 +111,7 @@ def compile_dicom_folder(dicom_folder: str,db_builder=None):
 			db_builder.add_json(nifti_file=nii_file,json_file=json_file)
 		return nii_file,json_file
 	else:
-		raise Exception("No nii file in %s" % dicom_folder)
+		raise FileNotFoundError("No nii file in %s" % dicom_folder)
 	return nii_file,json_file
 
 def get_dim_str(filename: str = None,
@@ -304,11 +309,11 @@ def get_file_list_from_str(obj,db_builder=None):
 			return []
 	elif os.path.isdir(obj):
 		all_filename_list = []
-		for root, dirs, files in os.walk(obj, topdown=False):
+		for root, dirs, files in os.walk(obj, topdown=False,followlinks=True):
 			n_ims = 0
 			n_dics = 0
 			for name in files:
-				filename = os.path.join(root, name)
+				filename = os.path.realpath(os.path.join(root, name))
 				if is_image_file(filename):
 					all_filename_list.append(filename)
 					if db_builder is not None:
@@ -316,7 +321,8 @@ def get_file_list_from_str(obj,db_builder=None):
 					n_ims += 1 
 				elif is_dicom(filename):
 					n_dics += 1
-			if n_dics > 0 and n_ims == 0: all_filename_list.append(root)
+			if n_dics > 0 and n_ims == 0:
+				all_filename_list.append(os.path.realpath(root))
 		return all_filename_list
 	else:
 		raise Exception("Invalid string input: %s" % obj)
@@ -363,7 +369,7 @@ def date_sorter(folder,ext):
 	filelist = sorted(filelist,key=os.path.getmtime)
 	return filelist
 
-def compile_dicom(dicom_folder: str,cache=True,db_builder=None):
+def compile_dicom(dicom_folder: str,cache=True,db_builder=None,verbose=False):
 	"""Compiles a folder of DICOMs into a .nii and .json file
 	
 	Takes a folder of dicom files and turns it into a .nii.gz file, with
@@ -389,18 +395,29 @@ def compile_dicom(dicom_folder: str,cache=True,db_builder=None):
 	tempfile = os.path.join(dicom_folder,"temp%s%s"%(ext2,ext1))
 	if not os.path.isfile(nii_file):
 		print("nii_file %s not found" % nii_file)
-	os.system("fslreorient2std '%s' '%s' >/dev/null 2>&1" % (nii_file,tempfile))
+
+	cwd = os.getcwd()
+	os.chdir(os.path.dirname(nii_file))
+	if verbose:
+		print("Reorienting %s" % nii_file)
+		print("tempfile is %s" % tempfile)
+	os.system("fslreorient2std '%s' '%s' >/dev/null 2>&1" % (os.path.basename(nii_file),os.path.basename(tempfile)))
 	if not os.path.isfile(tempfile):
 		if os.path.isfile(tempfile + ".gz"):
 			tempfile = tempfile + ".gz"
+			if os.path.splitext(nii_file)[1] == ".nii":
+				os.remove(nii_file)
+				nii_file = nii_file + ".gz"
 		else:
 			print("Tempfile %s not found" % tempfile)
 	if (os.path.isfile(tempfile)):
 		shutil.move(tempfile,nii_file)
+	
 	if os.path.splitext(nii_file)[1].lower() == ".nii":
-		os.system("gzip '%s' >/dev/null 2>&1" % nii_file)
+		os.system("gzip '%s' >/dev/null 2>&1" % os.path.basename(nii_file))
 		nii_file = nii_file + ".gz"
 		assert(os.path.isfile(nii_file))
+	os.chdir(cwd)
 	if db_builder is not None:
 		db_builder.add_json(nifti_file=nii_file,json_file=json_file)
 	return nii_file,json_file

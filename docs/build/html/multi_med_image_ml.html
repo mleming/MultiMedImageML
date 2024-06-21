@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="prev" title="multi_med_image_ml" href="modules.html" />
 
     <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.05.06 -->
-        <title>multi_med_image_ml package - Multi-Input Medical Image ML Toolkit 0.0.23 documentation</title>
+        <title>multi_med_image_ml package - Multi-Input Medical Image ML Toolkit 0.0.25 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=387cc868" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
@@ -179,7 +179,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.23 documentation</div></a>
+      <a href="index.html"><div class="brand">Multi-Input Medical Image ML Toolkit 0.0.25 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -203,7 +203,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.23 documentation</span>
+  <span class="sidebar-brand-text">Multi-Input Medical Image ML Toolkit 0.0.25 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -538,7 +538,7 @@ returned as two lists of men and women.</p>
 <span id="multi-med-image-ml-medimageloader-module"></span><h2>multi_med_image_ml.MedImageLoader module<a class="headerlink" href="#module-multi_med_image_ml.MedImageLoader" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.MedImageLoader.MedImageLoader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MedImageLoader.</span></span><span class="sig-name descname"><span class="pre">MedImageLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*image_folders</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pandas_cache='./pandas/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_record_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size=14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim=(96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_encoded=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">augment=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype='torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim=(1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim=(16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_obj=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recycle=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids=''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_ram=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precedence=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_dyn_inputs=14</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.MedImageLoader.</span></span><span class="sig-name descname"><span class="pre">MedImageLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*image_folders</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pandas_cache='./pandas/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_to_filename=&lt;function</span> <span class="pre">key_to_filename_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_record_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size=14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim=(96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_encoded=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_confounds=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">augment=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_ranges={}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype='torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim=(1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim=(16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_obj=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids=''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_ram=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precedence=[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_dyn_inputs=14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose=False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MedImageLoader.MedImageLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Loads medical images into a format that may be used by MultiInputModule.</p>
 <p>This loader preprocesses, reshapes, augments, and batches images and
@@ -988,17 +988,12 @@ May take a while.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.acc">
-<span class="sig-name descname"><span class="pre">acc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_pids_across_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.acc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.auc">
-<span class="sig-name descname"><span class="pre">auc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_pids_across_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.auc" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">acc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_pids_across_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_or_auc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'acc'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.acc" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam">
-<span class="sig-name descname"><span class="pre">grad_cam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_symlink</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">7</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">grad_cam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_symlink</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam" title="Permalink to this definition">¶</a></dt>
 <dd><p>Outputs a gradient class activation map for the input record</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1006,6 +1001,7 @@ May take a while.</p>
 <li><p><strong>pr</strong> (<a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><em>BatchRecord</em></a>) – Image batch to apply Grad-Cam to</p></li>
 <li><p><strong>add_symlink</strong> (<em>bool</em>) – If true, adds a symbolic link to the original image in the same folder as the grad-cam is stored in (default True)</p></li>
 <li><p><strong>grad_layer</strong> (<em>int</em>) – (default 7)</p></li>
+<li><p><strong>save</strong> (<em>bool</em>) – Save the output to the results folder (default True)</p></li>
 </ul>
 </dd>
 </dl>
@@ -1013,7 +1009,7 @@ May take a while.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.loop">
-<span class="sig-name descname"><span class="pre">loop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">loop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#multi_med_image_ml.Records.BatchRecord" title="multi_med_image_ml.Records.BatchRecord"><span class="pre">BatchRecord</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">record_encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Tests one input and saves it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1023,8 +1019,23 @@ May take a while.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.out_grad_cam_groups">
+<span class="sig-name descname"><span class="pre">out_grad_cam_groups</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.out_grad_cam_groups" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.pca_analysis">
+<span class="sig-name descname"><span class="pre">pca_analysis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ml_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pca'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.pca_analysis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.plot">
-<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'images'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_or_auc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_pids_across_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'images'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_or_auc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_pids_across_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.read_encodings">
+<span class="sig-name descname"><span class="pre">read_encodings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_encodings" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1032,6 +1043,16 @@ May take a while.</p>
 <span class="sig-name descname"><span class="pre">read_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reads all json files output by MultiInputTester.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.record_encodings">
+<span class="sig-name descname"><span class="pre">record_encodings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_files</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.record_encodings" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.MultiInputTester.MultiInputTester.save_encodings">
+<span class="sig-name descname"><span class="pre">save_encodings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.save_encodings" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1302,7 +1323,7 @@ necessary.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.BatchRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">BatchRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_text_records</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">BatchRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_records</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_by_pid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels_first</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_text_records</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.BatchRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class that stores batches of ImageRecord</p>
 <p>BatchRecord essentially abstracts lists of ImageRecord so that it returns
@@ -1438,7 +1459,7 @@ which patients have multiple images.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">ImageRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(96,</span> <span class="pre">96,</span> <span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_info_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_on_c</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(16,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.Records.</span></span><span class="sig-name descname"><span class="pre">ImageRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(96,</span> <span class="pre">96,</span> <span class="pre">96)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_info_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_on_c</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(16,</span> <span class="pre">32)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_nums</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#multi_med_image_ml.Records.Record" title="multi_med_image_ml.Records.Record"><code class="xref py py-class docutils literal notranslate"><span class="pre">Record</span></code></a></p>
 <p>A class used to represent an abstraction of an image for MedImageLoader.</p>
 <p>ImageRecord is used to keep and organize a given image in main memory.
@@ -1612,8 +1633,8 @@ space in main memory.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.cached_record">
-<span class="sig-name descname"><span class="pre">cached_record</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.cached_record" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.npy_file">
+<span class="sig-name descname"><span class="pre">npy_file</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.npy_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Path of the cached record</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1623,8 +1644,8 @@ space in main memory.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="multi_med_image_ml.Records.ImageRecord.npy_file">
-<span class="sig-name descname"><span class="pre">npy_file</span></span><a class="headerlink" href="#multi_med_image_ml.Records.ImageRecord.npy_file" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">npy_file</span></span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
 <dd><p>Path of the cached .npy record</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1802,6 +1823,31 @@ the array.</p>
 <section id="module-multi_med_image_ml.models">
 <span id="multi-med-image-ml-models-module"></span><h2>multi_med_image_ml.models module<a class="headerlink" href="#module-multi_med_image_ml.models" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.AutoEncoder1D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">AutoEncoder1D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.AutoEncoder1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.AutoEncoder1D.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.AutoEncoder1D.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.AutoEncoder1D.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#multi_med_image_ml.models.AutoEncoder1D.training" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.Classifier">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">Classifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_feat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Classifier" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
@@ -1877,6 +1923,31 @@ registered hooks while the latter silently ignores them.</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Decoder1D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">Decoder1D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Decoder1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Decoder1D.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Decoder1D.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Decoder1D.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#multi_med_image_ml.models.Decoder1D.training" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.Encoder">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">Encoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Encoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
@@ -1922,6 +1993,31 @@ are direct members of this module.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.Encoder.training">
 <span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#multi_med_image_ml.models.Encoder.training" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Encoder1D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">Encoder1D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Encoder1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Encoder1D.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.Encoder1D.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.Encoder1D.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#multi_med_image_ml.models.Encoder1D.training" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -2194,7 +2290,7 @@ copied to that device</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.MultiInputModule.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bdate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_regress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_encoded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoded_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_eval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.MultiInputModule.forward" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bdate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_regress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_encoded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoded_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_eval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">record_encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.MultiInputModule.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Puts image or BatchRecord through model and predicts a value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2206,6 +2302,7 @@ copied to that device</p>
 <li><p><strong>return_regress</strong> (<em>bool</em>) – If True, returns the confound prediction array as a second value (default False)</p></li>
 <li><p><strong>encoded</strong> (<em>return</em>) – If True, returns the encoded values of the images (default False)</p></li>
 <li><p><strong>encoded_input</strong> (<em>bool</em>) – Indicator that X is input that’s already been encoded and can be put straight into the classifier (default False)</p></li>
+<li><p><strong>record_encoding</strong> (<em>bool</em>) – If set, saves the most recent encoding as a numpy file in the variable saved_encoding</p></li>
 </ul>
 </dd>
 </dl>
@@ -2537,6 +2634,36 @@ registered hooks while the latter silently ignores them.</p>
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.VAE">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">VAE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latent_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">device(type='cpu')</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.VAE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.VAE.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.VAE.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.VAE.reset_parameters">
+<span class="sig-name descname"><span class="pre">reset_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.VAE.reset_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="multi_med_image_ml.models.VAE.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#multi_med_image_ml.models.VAE.training" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.models.get_age_arr">
 <span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.models.</span></span><span class="sig-name descname"><span class="pre">get_age_arr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.models.get_age_arr" title="Permalink to this definition">¶</a></dt>
@@ -2581,7 +2708,7 @@ path to a key forwards and backwards.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="multi_med_image_ml.utils.compile_dicom">
-<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">compile_dicom</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dicom_folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db_builder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.compile_dicom" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">multi_med_image_ml.utils.</span></span><span class="sig-name descname"><span class="pre">compile_dicom</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dicom_folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db_builder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#multi_med_image_ml.utils.compile_dicom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compiles a folder of DICOMs into a .nii and .json file</p>
 <p>Takes a folder of dicom files and turns it into a .nii.gz file, with
 metadata stored in a .json file. Relies on dcm2niix.</p>
@@ -3114,11 +3241,15 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.same_patients"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.same_patients</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.x_axis_opts"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.x_axis_opts</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.acc"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.acc()</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.auc"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.auc()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.grad_cam"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.grad_cam()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.loop"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.loop()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.out_grad_cam_groups"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.out_grad_cam_groups()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.pca_analysis"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.pca_analysis()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.plot"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.plot()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_encodings"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.read_encodings()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.read_json"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.read_json()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.record_encodings"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.record_encodings()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.MultiInputTester.save_encodings"><code class="docutils literal notranslate"><span class="pre">MultiInputTester.save_encodings()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#multi_med_image_ml.MultiInputTester.NotEnoughPatients"><code class="docutils literal notranslate"><span class="pre">NotEnoughPatients</span></code></a></li>
@@ -3199,8 +3330,8 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.static_inputs"><code class="docutils literal notranslate"><span class="pre">ImageRecord.static_inputs</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.static_input_res"><code class="docutils literal notranslate"><span class="pre">ImageRecord.static_input_res</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.cache"><code class="docutils literal notranslate"><span class="pre">ImageRecord.cache</span></code></a></li>
-<li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.cached_record"><code class="docutils literal notranslate"><span class="pre">ImageRecord.cached_record</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.npy_file"><code class="docutils literal notranslate"><span class="pre">ImageRecord.npy_file</span></code></a></li>
+<li><a class="reference internal" href="#id0"><code class="docutils literal notranslate"><span class="pre">ImageRecord.npy_file</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.exam_date"><code class="docutils literal notranslate"><span class="pre">ImageRecord.exam_date</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.bdate"><code class="docutils literal notranslate"><span class="pre">ImageRecord.bdate</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.Records.ImageRecord.json_file"><code class="docutils literal notranslate"><span class="pre">ImageRecord.json_file</span></code></a></li>
@@ -3234,6 +3365,11 @@ in a pandas dataframe. By default, the file path is the key.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-multi_med_image_ml.models">multi_med_image_ml.models module</a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.models.AutoEncoder1D"><code class="docutils literal notranslate"><span class="pre">AutoEncoder1D</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.models.AutoEncoder1D.forward"><code class="docutils literal notranslate"><span class="pre">AutoEncoder1D.forward()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.AutoEncoder1D.training"><code class="docutils literal notranslate"><span class="pre">AutoEncoder1D.training</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Classifier"><code class="docutils literal notranslate"><span class="pre">Classifier</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Classifier.forward"><code class="docutils literal notranslate"><span class="pre">Classifier.forward()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Classifier.parameters"><code class="docutils literal notranslate"><span class="pre">Classifier.parameters()</span></code></a></li>
@@ -3245,10 +3381,20 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Decoder.training"><code class="docutils literal notranslate"><span class="pre">Decoder.training</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Decoder1D"><code class="docutils literal notranslate"><span class="pre">Decoder1D</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Decoder1D.forward"><code class="docutils literal notranslate"><span class="pre">Decoder1D.forward()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Decoder1D.training"><code class="docutils literal notranslate"><span class="pre">Decoder1D.training</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Encoder"><code class="docutils literal notranslate"><span class="pre">Encoder</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Encoder.forward"><code class="docutils literal notranslate"><span class="pre">Encoder.forward()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Encoder.parameters"><code class="docutils literal notranslate"><span class="pre">Encoder.parameters()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Encoder.training"><code class="docutils literal notranslate"><span class="pre">Encoder.training</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Encoder1D"><code class="docutils literal notranslate"><span class="pre">Encoder1D</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Encoder1D.forward"><code class="docutils literal notranslate"><span class="pre">Encoder1D.forward()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.Encoder1D.training"><code class="docutils literal notranslate"><span class="pre">Encoder1D.training</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.EnsembleModel"><code class="docutils literal notranslate"><span class="pre">EnsembleModel</span></code></a><ul>
@@ -3301,6 +3447,12 @@ in a pandas dataframe. By default, the file path is the key.</p>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Reshape"><code class="docutils literal notranslate"><span class="pre">Reshape</span></code></a><ul>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Reshape.forward"><code class="docutils literal notranslate"><span class="pre">Reshape.forward()</span></code></a></li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.Reshape.training"><code class="docutils literal notranslate"><span class="pre">Reshape.training</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.VAE"><code class="docutils literal notranslate"><span class="pre">VAE</span></code></a><ul>
+<li><a class="reference internal" href="#multi_med_image_ml.models.VAE.forward"><code class="docutils literal notranslate"><span class="pre">VAE.forward()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.VAE.reset_parameters"><code class="docutils literal notranslate"><span class="pre">VAE.reset_parameters()</span></code></a></li>
+<li><a class="reference internal" href="#multi_med_image_ml.models.VAE.training"><code class="docutils literal notranslate"><span class="pre">VAE.training</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#multi_med_image_ml.models.get_age_arr"><code class="docutils literal notranslate"><span class="pre">get_age_arr()</span></code></a></li>
@@ -3381,7 +3533,7 @@ in a pandas dataframe. By default, the file path is the key.</p>
       
     </aside>
   </div>
-</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4ab1abf8"></script>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2540bf2c"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/scripts/furo.js?v=4e2eecee"></script>

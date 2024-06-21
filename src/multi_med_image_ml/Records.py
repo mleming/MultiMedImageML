@@ -130,7 +130,7 @@ class ImageRecord(Record):
 		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
 		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
 		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
-		cached_record (bool): Path of the cached record
+		npy_file (bool): Path of the cached record
 		npy_file (str): Path of the cached .npy record
 		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
 		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
@@ -140,10 +140,10 @@ class ImageRecord(Record):
 	
 	def __init__(self,
 		filename: str,
-		static_inputs=[],
+		static_inputs : list = [],
 		database = None,
 		X_dim : tuple = (96,96,96),
-		dtype : str ="torch",
+		dtype : str = "torch",
 		extra_info_list : list = None,
 		y_on_c : bool = True,
 		cache : bool = True,
@@ -180,7 +180,6 @@ class ImageRecord(Record):
 		
 		self.times_called = 0
 		self.cache = cache
-		self.cached_record = None
 	def get_image_type(self):
 		"""Determines the type of image that self.filename is"""
 		if self.image_type is None:
@@ -250,23 +249,28 @@ class ImageRecord(Record):
 		if self.get_image_type() == "dicom_folder":
 			self.filename,self.json_file = compile_dicom(self.filename,
 				db_builder=self.database)
+			self.npy_file = get_dim_str(self.filename,self.X_dim)
+			assert(os.path.isfile(self.filename))
+			assert(os.path.isfile(self.json_file))
 			self.image_type = None
-		self.cached_record = get_dim_str(self.filename,self.X_dim)
-		if self.cache and os.path.isfile(self.cached_record):
-			self.X = np.load(self.cached_record)
+		if self.npy_file != get_dim_str(self.filename,self.X_dim):
+			print("Error: %s != %s" % ( self.npy_file,get_dim_str(self.filename,self.X_dim)))
+		assert(self.npy_file == get_dim_str(self.filename,self.X_dim))
+		if self.cache and os.path.isfile(os.path.realpath(self.npy_file)):
+			self.X = np.load(os.path.realpath(self.npy_file))
 		elif self.get_image_type() == "nifti":
-			self.X = nb.load(self.filename).get_fdata()
+			self.X = nb.load(os.path.realpath(self.filename)).get_fdata()
 		elif self.get_image_type() == "npy":
-			self.X = np.load(self.filename)
+			self.X = np.load(os.path.realpath(self.filename))
 		elif self.get_image_type() == "dicom":
-			self.X = dicom.dcmread(self.filename).pixel_array
+			self.X = dicom.dcmread(os.path.realpath(self.filename)).pixel_array
 		else:
 			print("Error in %s" % self.filename)
 			print("Error in %s" % self.npy_file)
 			raise Exception("Unsupported image type: %s"%self.get_image_type())
 		self.X = resize_np(self.X,self.X_dim)
-		if self.cache and not os.path.isfile(self.cached_record):
-			np.save(self.cached_record,self.X)
+		if self.cache and not os.path.isfile(os.path.realpath(self.npy_file)):
+			np.save(self.npy_file,self.X)
 		if self.database is not None:
 			self.database.add_json(nifti_file=self.filename)
 		if self.dtype == "torch":
@@ -360,14 +364,14 @@ class BatchRecord():
 	"""
 	
 	def __init__(self,
-			image_records,
-			dtype="torch",
-			sort=True,
-			batch_by_pid=False,
-			channels_first = True,
-			gpu_ids="",
-			batch_size = 14,
-			get_text_records = False):
+			image_records : list[ImageRecord],
+			dtype : str = "torch",
+			sort : bool = True,
+			batch_by_pid : bool = False,
+			channels_first : bool = True,
+			gpu_ids : str = "",
+			batch_size : int = 14,
+			get_text_records : bool = False):
 		self.image_records = image_records
 		assert(
 			np.all(
