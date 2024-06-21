@@ -1,3 +1,3 @@
 import importlib.metadata
 
-__version__ = "0.0.27" #importlib.metadata.version(__package__ or __name__)
+__version__ = "0.0.28" #importlib.metadata.version(__package__ or __name__)

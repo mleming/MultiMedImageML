@@ -364,7 +364,7 @@ class BatchRecord():
 	"""
 	
 	def __init__(self,
-			image_records : list[ImageRecord],
+			image_records : list,
 			dtype : str = "torch",
 			sort : bool = True,
 			batch_by_pid : bool = False,
