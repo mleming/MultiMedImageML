@@ -2,7 +2,7 @@
 
 name = "multi_med_image_ml"
 
-version = "0.0.27"
+version = "0.0.29"
 
 dependencies = [
   "numpy>=1.22.0",
@@ -22,7 +22,9 @@ dependencies = [
   "dcm2niix",
   "platformdirs",
   "requests>=2.28.1",
-  "gdown>=4.4.0"
+  "gdown>=4.4.0",
+  "adjustText",
+  "matplotlib>=3.5.0"
 ]
 requires-python = ">=3.8"
 
