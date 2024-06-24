@@ -1,5 +1,5 @@
 import os,sys,json,argparse,glob,shutil,warnings,re,torch,random,requests,gdown
-import datetime,datefinder,platform,dicom2nifti
+import datetime,datefinder,platform,dicom2nifti,hashlib
 import numpy as np
 import pandas as pd
 from copy import deepcopy as copy

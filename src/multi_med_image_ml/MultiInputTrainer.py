@@ -4,6 +4,7 @@ import numpy as np
 from .Records import BatchRecord
 import matplotlib.pyplot as plt
 import matplotlib
+from time import time
 matplotlib.use('Agg')
 
 class MultiInputTrainer:
@@ -116,8 +117,28 @@ class MultiInputTrainer:
 			
 		self.verbose = verbose
 		self.save_latest_freq = save_latest_freq
-		
-	def loop(self, pr: BatchRecord, dataloader = None):
+		self.time = time()
+		self.time_dict = {}
+	def log_time(self,m):
+		t = time() - self.time
+		self.time = time()
+		if m not in self.time_dict:
+			self.time_dict[m] = (t,1)
+		else:
+			self.time_dict[m] = (self.time_dict[m][0] + t,
+								self.time_dict[m][1]+1)
+	def reset_time(self):
+		self.time=time()
+	def get_time_str(self):
+		s = ""
+		for m in sorted(self.time_dict):
+			total_time,count = self.time_dict[m]
+			mean_time = total_time / count
+			s = s + ("%s %.3f; " % (m,mean_time))
+		return s
+	def loop(self,
+			pr: BatchRecord,
+			dataloader = None):
 		"""Loops a single BatchRecord through one iteration
 		
 		Loops a BatchRecord through one iteration. Also switches the queues of
@@ -125,30 +146,39 @@ class MultiInputTrainer:
 		
 		Args:
 			pr (multi_med_image_ml.Records.BatchRecord): Record to be evaluated
-			dataloader (multi_med_image_ml.DataBaseWrapper.DataBaseWrapper): Database
+			dataloader (multi_med_image_ml.MedImageLoader.MedImageLoader): Database
 		"""
 		
 		assert(isinstance(pr,BatchRecord))
+		
+		self.reset_time()
 		x = self.model(pr,return_encoded=True)
+		self.log_time("1. Encode run")
 		if pr.get_text_records:
 			x_text = encode_static_inputs(
 						pr.get_text_records(),
 						d=self.model.latent_dim
 					)
 			x = torch.concat(x,x_text,axis=0)
+		self.log_time("2. Encode static")
 		y_pred,y_reg = self.model(x,
 				encoded_input=True,
 				dates=pr.get_exam_dates(),
-				bdate=pr.get_birth_dates()[0])
+				bdate=pr.get_birth_dates()[0],
+				static_input = pr.get_static_inputs())
+		self.log_time("3. Run encoded")
 		if self.one_step:
 			Y = pr.get_Y()
+			self.log_time("4. Get Y")
 			self.loss_Y = self.loss_function(y_pred,Y)
 			self.loss_C_dud = self.loss_function(y_reg,pr.get_C_dud())
 			self.loss_classifier = self.loss_Y + (self.loss_C_dud)
 			if self.model.variational:
 				self.loss_kl = self.model.kl * 0.0005
 				self.loss_classifier = self.loss_classifier + self.loss_kl
+			self.log_time("5. Loss additions")
 			self.loss_classifier.backward()
+			self.log_time("6. Loss backward")
 		else:
 			if self.regress:
 				self.loss_regressor = \
@@ -156,7 +186,9 @@ class MultiInputTrainer:
 			else:
 				self.loss_regressor = \
 					self.loss_function(y_reg,pr.get_C_dud())
+			self.log_time("4. Regress loss")
 			self.loss_regressor.backward()
+			self.log_time("5. Regress loss backward")
 		
 		if self.loss_image_dir is not None:
 			
@@ -166,7 +198,7 @@ class MultiInputTrainer:
 			if self.model.variational:
 				self.ys_kl.append(float(self.loss_kl))
 			self.ys_c_dud.append(float(self.loss_C_dud))
-
+			self.log_time("7. Loss record append")
 		if self.verbose:
 			if self.model.variational:
 				print(("%d: Class: %.6f, KL: %.6f, Dud: "+\
@@ -194,6 +226,7 @@ class MultiInputTrainer:
 				self.model.regressor_freeze()
 				if dataloader is not None:
 					dataloader.switch_stack()
+			self.log_time("8. One step")
 			self.one_step = not self.one_step
 		
 		if self.index % self.save_latest_freq == 0 and self.index != 0:
@@ -205,6 +238,7 @@ class MultiInputTrainer:
 					},
 					self.model_file
 				)
+				self.log_time("9. Save state dict")
 			if self.loss_image_dir is not None:
 				plt.plot(list(range(len(self.xs))),self.ys,
 					label="Classifier loss - label")
@@ -220,6 +254,7 @@ class MultiInputTrainer:
 					self.ys_c_dud,label="Classifier loss - adversarial")
 				plt.legend(loc='upper right')
 				plt.savefig(self.loss_image_file)
+				self.log_time("10. Plot fig")
 				plt.clf()
 				
 				if self.model.variational:
@@ -233,7 +268,7 @@ class MultiInputTrainer:
 													self.ys,
 													self.ys_2,
 													self.ys_c_dud]))
-				
+				self.log_time("11. Save arrays")
 		self.index += 1
 
 	def test(self):

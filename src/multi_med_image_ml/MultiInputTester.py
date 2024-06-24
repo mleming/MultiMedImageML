@@ -14,6 +14,7 @@ from sklearn.metrics import auc,roc_curve
 import glob
 import warnings
 from .utils import resize_np,is_nan
+from adjustText import adjust_text
 
 # Tests either the model directly or the output files
 class MultiInputTester:
@@ -82,26 +83,31 @@ class MultiInputTester:
 						same_pids_across_groups = False,
 						save = False,
 						ind = 0,
-						acc_or_auc = "acc"):
+						acc_or_auc = "acc",
+						min_pids=1):
+		
 		if acc_or_auc == "auc":
 			group_dict = self.pid_records.auc(ind=ind,
 					database_key=database_key,
 					opt=opt,
 					divides=divides,
-					same_pids_across_groups=same_pids_across_groups)
+					same_pids_across_groups=same_pids_across_groups,
+					min_pids=min_pids)
 		elif acc_or_auc == "acc":
 			group_dict = self.pid_records.acc(database_key=database_key,
 					opt=opt,
 					divides=divides,
-					same_pids_across_groups=same_pids_across_groups)
+					same_pids_across_groups=same_pids_across_groups,
+					min_pids = min_pids)
 		else:
 			raise Exception("Invalid arg for acc_or_auc: %s" % acc_or_auc)
 		if save:
 			out_json_folder = os.path.join(self.out_record_folder,"json_res")
 			os.makedirs(out_json_folder,exist_ok=True)
+			database_key_title = database_key.replace("/","_")
 			out_json_file = os.path.join(
 				out_json_folder,
-				f"{database_key}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.json")
+				f"{database_key_title}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.json")
 			with open(out_json_file,'w') as fileobj:
 				json.dump(group_dict,fileobj,indent=4)
 		return group_dict
@@ -113,17 +119,21 @@ class MultiInputTester:
 			opt = None,
 			divides = None,
 			same_pids_across_groups = False,
-			min_pids = 1):
+			min_pids = 1,
+			do_adjust_text=True):
+		
 		group_set = self.acc(
 					database_key = database_key,
 					opt = opt,
 					divides = divides,
 					same_pids_across_groups = same_pids_across_groups,
 					ind=ind,
-					acc_or_auc=acc_or_auc
+					acc_or_auc=acc_or_auc,
+					min_pids=min_pids
 				)
 		assert(group_set is not None)
 		plt.clf()
+		texts = []
 		for group in group_set:
 			if group is None: continue
 			x = group_set[group][acc_or_auc]
@@ -137,19 +147,22 @@ class MultiInputTester:
 					y = group_set[group]["images"]/group_set[group]["patients"]
 			else:
 				y = group_set[group][x_axis_opts]
+				if x_axis_opts == "images": assert(y > 0)
 			plt.scatter(y,x,c='blue',label=group)
-			plt.text(y,x,group[:10])
+			texts.append(plt.text(y,x,group[:20],fontsize=16))
 		out_plot_folder = os.path.join(self.out_record_folder,"plots")
 		os.makedirs(out_plot_folder,exist_ok=True)
-		
+		database_key_title = database_key.replace("/","_")
 		out_plot_file = os.path.join(
 			out_plot_folder,
-			f"{database_key}_{x_axis_opts}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.png")
-		xlabel = x_axis_opts.replace("_"," ").title()
+			f"{database_key_title}_{x_axis_opts}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.png")
+		xlabel = "# " + x_axis_opts.replace("_"," ").title()
 		if same_pids_across_groups:
-			xlabel = xlabel + " %s" % (group_set[group]["patients"])
-		plt.xlabel(xlabel)
-		plt.ylabel(acc_or_auc.upper())
+			xlabel = xlabel + " (%s Patients)" % (group_set[group]["patients"])
+		plt.xlabel(xlabel,fontsize=16)
+		plt.ylabel(acc_or_auc.upper(),fontsize=16)
+		if do_adjust_text:
+			adjust_text(texts)
 		plt.savefig(out_plot_file)
 
 	def loop(self,pr: BatchRecord,record_encoding=False):
@@ -691,42 +704,41 @@ class _FileRecord:
 					return "%d"%s2
 				return "%d-%d" %(s1+1,s2)
 		return "%s+" % divides[-1]
-		
-	def get_filetypes_name_num_group(self,database_key):
-		"""Returns the number of different modalities in a given set of images
-		"""
+	def _get_group_set(self,database_key):
+		if "/" in database_key:
+			database_key,alt_key = database_key.split("/")
+		else:
+			alt_key = None
 		
 		ftypes = [self.database.loc_val(_,database_key) \
 			for _ in self.X_files]
+		
 		for i,f in enumerate(ftypes):
-			if f is None: ftypes[i] = "None"
+			if is_nan(f,inc_null_str=True):
+				if alt_key is not None:
+					alt = self.database.loc_val(self.X_files[i],alt_key)
+					if not is_nan(alt):
+						ftypes[i] = alt
+					else:
+						ftypes[i] = "None"
+				else:
+					ftypes[i] = "None"
+			
 			ftypes[i] = ftypes[i].strip().upper()
 		ftypes = set(ftypes)
+		return ftypes
+	def get_filetypes_name_num_group(self,database_key):
+		"""Returns the number of different modalities in a given set of images
+		"""
+		ftypes = self._get_group_set(database_key)
 		return str(len(ftypes))
 		
 	def get_filetypes_name_group(self,database_key):
 		"""Returns a list of unique modalities in a given set of images
 		"""
+		ftypes = self._get_group_set(database_key)
+		return  "\n".join(sorted(list(ftypes)))
 		
-		ftypes = [self.database.loc_val(_,database_key) \
-			for _ in self.X_files]
-		for i,f in enumerate(ftypes):
-			if f is None: ftypes[i] = "None"
-			ftypes[i] = ftypes[i].strip().upper()
-		return  "_".join(sorted(list(set(ftypes))))
-		
-	def get_filetypes_name_group_num(self,database_key):
-		"""Returns a list of unique modalities in a given set of images
-		"""
-
-		ftypes = [self.database.loc_val(_,database_key) \
-			for _ in self.X_files]
-		for i,f in enumerate(ftypes):
-			if f is None: ftypes[i] = "None"
-			ftypes[i] = ftypes[i].strip().upper()
-		ftypes = set(ftypes)
-		return  "_".join(sorted(list(ftypes)))
-
 	def get_acc(self):
 		return ((np.argmax(self.Y)) == (np.argmax(self.y_pred))).astype(float)
 
@@ -913,6 +925,7 @@ class _AllRecords:
 						opt = None,
 						divides = None,
 						same_pids_across_groups = False,
+						min_pids = 1
 						):
 		""" Returns a dictionary in which file records are sorted by groups
 		"""
@@ -932,9 +945,14 @@ class _AllRecords:
 		if same_pids_across_groups:
 			
 			intersect_pids = None
-			for group in group_pids:
+			for group in sorted(group_pids,key = lambda k: len(group_pids[k]), reverse=True):
 				if intersect_pids is None: intersect_pids = group_pids[group]
-				else: intersect_pids = intersect_pids.intersection(group_pids[group])
+				else:
+					intersect = intersect_pids.intersection(group_pids[group])
+					if len(intersect) < min_pids:
+						continue
+					else:
+						intersect_pids = intersect
 			if intersect_pids is None or len(intersect_pids) == 0:
 				raise NotEnoughPatients("No patients that intersect between groups")
 			group_dicts_same_pid = {}
@@ -952,7 +970,8 @@ class _AllRecords:
 						database_key = None,
 						opt = None,
 						divides = None,
-						same_pids_across_groups = False
+						same_pids_across_groups = False,
+						min_pids=1
 						):
 		"""Returns set of prediction arrays with the 
 		
@@ -962,7 +981,8 @@ class _AllRecords:
 							database_key = database_key,
 							divides = divides,
 							opt = opt,
-							same_pids_across_groups = same_pids_across_groups)
+							same_pids_across_groups = same_pids_across_groups,
+							min_pids=min_pids)
 		
 		group_stat = {}
 		
@@ -973,12 +993,12 @@ class _AllRecords:
 				assert(len(filerec.Y.shape) == 2)
 				assert(len(filerec.y_pred.shape) == 2)
 				if filerec.pid not in group_stat[group]:
-					group_stat[group][filerec.pid] = (filerec.Y,filerec.y_pred,1)
+					group_stat[group][filerec.pid] = (filerec.Y,filerec.y_pred,1,set(filerec.X_files))
 				else:
-					Y_all,y_pred_all,image_count = group_stat[group][filerec.pid]
+					Y_all,y_pred_all,image_count,image_set = group_stat[group][filerec.pid]
 					group_stat[group][filerec.pid] = (filerec.Y+Y_all,
 											filerec.y_pred+y_pred_all,
-											image_count+1)
+											image_count+1,image_set.union(set(filerec.X_files)))
 		
 		# Mean by patient ID
 		for group in group_stat:
@@ -986,9 +1006,10 @@ class _AllRecords:
 			y_all_pred_group = None
 			patient_count = 0
 			image_count = 0
+			image_sets = set()
 			assert(len(group_stat[group]) > 0)
 			for pid in group_stat[group]:
-				Y_all,y_pred_all,imc = group_stat[group][pid]
+				Y_all,y_pred_all,imc,image_set = group_stat[group][pid]
 				if Y_all_group is None:
 					Y_all_group = Y_all / imc
 					y_all_pred_group = y_pred_all / imc
@@ -1003,13 +1024,14 @@ class _AllRecords:
 				assert(len(y_pred_all.shape) == 2)
 				patient_count += 1
 				image_count += imc
+				image_sets = image_sets.union(image_set)
 			
 			assert(len(Y_all_group.shape) == 2)
 			assert(len(y_all_pred_group.shape) == 2)
 			assert(Y_all_group.shape == y_all_pred_group.shape)
 			group_stat[group] = (Y_all_group,
 								y_all_pred_group,
-								image_count,
+								len(image_sets),
 								patient_count)
 		
 		return group_stat
@@ -1019,7 +1041,8 @@ class _AllRecords:
 				database_key : str = None,
 				opt : str = None,
 				divides : list = None,
-				same_pids_across_groups : bool = False) -> dict:
+				same_pids_across_groups : bool = False,
+				min_pids=1) -> dict:
 		"""Returns the AUROC of the test
 		
 		Args:
@@ -1035,7 +1058,8 @@ class _AllRecords:
 		group_stat = self.get_group_pred_arrs(
 						database_key = database_key,
 						opt=opt,divides=divides,
-						same_pids_across_groups=same_pids_across_groups)
+						same_pids_across_groups=same_pids_across_groups,
+						min_pids=min_pids)
 		group_aucs = {}
 		for group in group_stat:
 			Ys,y_preds,image_count,patient_count = group_stat[group]
@@ -1053,7 +1077,8 @@ class _AllRecords:
 				opt : str = None,
 				divides : list = None,
 				same_pids_across_groups : bool = False,
-				save : bool = False) -> dict:
+				save : bool = False,
+				min_pids : int = 1) -> dict:
 		"""Returns the accuracy of the test
 		
 		Args:
@@ -1071,7 +1096,8 @@ class _AllRecords:
 						database_key = database_key,
 						opt = opt,
 						divides = divides,
-						same_pids_across_groups = same_pids_across_groups)
+						same_pids_across_groups = same_pids_across_groups,
+						min_pids=min_pids)
 		group_accs = {}
 		for group in group_stat:
 			Ys,y_preds,image_count,patient_count = group_stat[group]

@@ -48,6 +48,7 @@ class Record:
 		static_inputs=[],
 		database = None):
 		self.static_inputs = static_inputs
+		self.static_input_res = None
 		self.is_loaded = False			
 		self.group_by = None
 		self.bdate = None
@@ -80,7 +81,7 @@ class Record:
 		if self.static_input_res is None:
 			self.static_input_res = []
 			for key in self.static_inputs:
-				static_inputs.append(
+				self.static_input_res.append(
 					self.database.loc_val(self.npy_file,key)
 				)
 		return self.static_input_res
@@ -130,7 +131,6 @@ class ImageRecord(Record):
 		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
 		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
 		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
-		npy_file (bool): Path of the cached record
 		npy_file (str): Path of the cached .npy record
 		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
 		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
@@ -170,9 +170,6 @@ class ImageRecord(Record):
 		self.c_nums = c_nums
 		self.json_file = None
 
-		self.static_inputs = []
-		self.static_input_res = None
-		
 		self.loaded = False
 		if self.database is not None:
 			if self.npy_file in self.database.database:
@@ -385,6 +382,7 @@ class BatchRecord():
 		if sort: self.image_records = sorted(image_records)
 		self.dtype=dtype
 		self.batch_size = batch_size
+		self.sort_order()
 		self.batch_by_pid=batch_by_pid
 		self.get_text_records = get_text_records
 		if self.batch_by_pid:
@@ -397,6 +395,12 @@ class BatchRecord():
 		return 'BatchRecord'
 	def get_text_records(self):
 		return
+	def sort_order(self,scramble=False,batch_size=None):
+		self.call_order = list(range(min(len(self.image_records),self.batch_size)))
+		if scramble:
+			random.shuffle(self.call_order)
+		if batch_size is not None and batch_size < min(len(self.image_records),self.batch_size):
+			self.call_order = self.call_order[:min(len(self.image_records),self.batch_size)]
 	def _get(self,callback,augment=False):
 		Xs = []
 		no_arr = False
@@ -407,7 +411,7 @@ class BatchRecord():
 					"Warning: label values differ in Patient %s" % self.pid
 				)
 		for i,im in enumerate([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
-			else self.image_records):
+			else [self.image_records[_] for _ in self.call_order]):
 			if i >= self.batch_size: break
 			if callback == "X":
 				X = im.get_X(augment=augment)
@@ -481,7 +485,7 @@ class BatchRecord():
 	def get_birth_dates(self):
 		return self._get("birth_dates")
 	def get_static_inputs(self):
-		return self._get("static_inputs")
+		return self.image_records[0].get_static_inputs()
 
 # Used for memory management purposes
 class AllRecords:

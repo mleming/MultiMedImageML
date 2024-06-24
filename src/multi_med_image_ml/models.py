@@ -235,6 +235,7 @@ class MultiInputModule(nn.Module):
 		use_attn (bool): UNIMPLEMENTED/UNTESTED. Adds an attention mechanism to the classifier (default False)
 		num_training_samples (int): Number of training samples to sample for the uncertainty removal mechanism (default 300)
 		static_record (set): Set of static keys put into the model during training, to prevent unrecognized keys from being input during testing
+		static_dropout (bool): If true, randomly masks static input and age encoding during training to make models that can accept either input (default False)
 	"""
 	
 	def __init__(self,
@@ -243,14 +244,17 @@ class MultiInputModule(nn.Module):
 				n_dyn_inputs: int = 14,
 				n_stat_inputs: int = 2,
 				use_attn: bool = False,
-				encode_age: bool = False,
+				encode_age: bool = True,
+				use_static_input: bool = True,
 				variational: bool = False, # Makes it a variational encoder
 				zero_input: bool = False, # Repeats input into classifier or makes it zeros
 				remove_uncertain: bool = False,
 				device = torch.device('cpu'),
 				latent_dim: int = 128,
 				weights: str = None,
-				grad_layer: int = 7):
+				grad_layer: int = 7,
+				verbose : bool = False,
+				static_dropout: bool = True): # Randomly drops static inputs and age encoding when training
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters
@@ -290,10 +294,13 @@ class MultiInputModule(nn.Module):
 				),
 				device=device)
 
+		self.verbose = verbose
+
 		# Training options
 		self.use_attn = use_attn
 		self.encode_age = encode_age
-		self.static_dropout = True # Randomly mask static inputs in training
+		self.use_static_input = use_static_input
+		self.static_dropout = static_dropout # Randomly mask static inputs in training
 		self.variational = variational
 		
 		# A record that prevents unrecognized keys from being applied during
@@ -304,6 +311,7 @@ class MultiInputModule(nn.Module):
 		base_feat = 64
 		# Modules
 		
+
 		# Makes the encoder output a variational latent space, so it's a
 		# Gaussian distribution.
 		if self.variational:
@@ -446,12 +454,12 @@ class MultiInputModule(nn.Module):
 				#assert(self.gradients is not None)
 			if isinstance(x,BatchRecord):
 				assert(x.dtype == "torch")
-				if len(x.get_static_inputs()[0]) > 0:
-					static_inputs = [_[0] for _ in x.get_static_inputs()]
-					if self.n_stat_inputs != len(static_inputs):
+				if len(x.get_static_inputs()) > 0:
+					static_input = x.get_static_inputs() # [_[0] for _ in x.get_static_inputs()]
+					if self.n_stat_inputs != len(static_input):
 						raise Exception(
 					"Number of static inputs not equal to input: %d != %d"\
-						 % (len(static_inputs),self.n_stat_inputs))
+						 % (len(static_input),self.n_stat_inputs))
 				dates = x.get_exam_dates()
 				bdates = x.get_birth_dates()
 				bdate = None
@@ -515,9 +523,11 @@ class MultiInputModule(nn.Module):
 		if use_regression:
 			reg = self.regressor(x)
 			# Encode dynamic inputs with dates using positional encoding
-		if (self.encode_age) or \
+		if (self.encode_age and not self.training) or \
+			(self.encode_age and self.training and not self.static_dropout) or \
 			(self.training and self.static_dropout and \
 				random.choice([True,False])):
+			if self.verbose: print("Encoding age")
 			age_encodings = []
 			if dates is not None:
 				for i,date in enumerate(dates):
@@ -532,6 +542,8 @@ class MultiInputModule(nn.Module):
 									device=x.device
 									).float()
 				x = torch.add(x,age_encodings)
+		else:
+			if self.verbose: print("Not encoding age")
 
 		x = torch.unsqueeze(x,0)
 		# Pad encodings with zeros, depending on input size
@@ -548,8 +560,10 @@ class MultiInputModule(nn.Module):
 			#x = x.repeat(1,(e_size[1]*2 // x.size()[1]),1)[:,:e_size[1],:]
 		
 		# Place static inputs near end
-		if static_input is not None:
+		if static_input is not None and self.use_static_input:
 			if len(static_input) != self.n_stat_inputs:
+				print(static_input)
+				print(self.n_stat_inputs)
 				raise Exception(
 						"Received %d static inputs, but it is set at %d" % \
 						(len(static_input),self.n_stat_inputs)
@@ -565,9 +579,16 @@ class MultiInputModule(nn.Module):
 			x_ = torch.tensor(x_,device = x.device)
 			x_ = torch.unsqueeze(x_,0)
 			for i in range(x_.shape[0]):
-				if ((not self.static_dropout) or random.choice([True,False]) and self.training) or\
-					(not self.static_dropout):
+				if (self.use_static_input and not self.training) or \
+					(self.use_static_input and self.training and not self.static_dropout) or \
+					(self.training and self.static_dropout and random.choice([True,False])):
+					if self.verbose: print("Encoding static input")
 					x[:,(-(self.n_stat_inputs) + i):,:] = x_[i,:]
+				else:
+					if self.verbose:
+						print("Not encoding static input")
+		else:
+			if self.verbose: print("Not encoding static input")
 		
 		# Randomly order dynamic encodings
 		r = list(range(self.n_inputs))

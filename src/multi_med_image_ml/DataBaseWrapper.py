@@ -312,8 +312,18 @@ class DataBaseWrapper:
 	
 	def loc_val(self,npy_file,c):
 		fkey = self.key_to_filename(npy_file,reverse=True)
-		try:	
+		try:
 			return self.database.loc[fkey,c]
+			if "/" in c:
+				c,c_alt = c.split("/")
+			else:
+				c_alt = None
+			val = self.database.loc[fkey,c]
+			if is_nan(val):
+				alt_val = self.database.loc[fkey,c]
+				return alt_val
+			else:
+				return val
 		except KeyError:
 			nifti_file = get_dim_str(fkey,X_dim=self.X_dim,outtype=".nii.gz")
 			
