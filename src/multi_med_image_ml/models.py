@@ -544,7 +544,20 @@ class MultiInputModule(nn.Module):
 				x = torch.add(x,age_encodings)
 		else:
 			if self.verbose: print("Not encoding age")
-
+			#age_encodings = []
+			#for i in range(x.size()[0]):
+			#	age_encoding = get_age_encoding(
+			#				datetime(year=2000,day=1,month=1),
+			#				datetime(year=1920,day=1,month=1),
+			#				d = self.latent_dim)
+			#	age_encodings.append(age_encoding)
+			#age_encodings = np.array(age_encodings)
+			#age_encodings =  torch.tensor(
+			#						age_encodings,
+			#						device=x.device
+			#						).float()
+			#x = torch.add(x,age_encodings)
+		
 		x = torch.unsqueeze(x,0)
 		# Pad encodings with zeros, depending on input size
 		e_size = list(x.size())
@@ -571,7 +584,7 @@ class MultiInputModule(nn.Module):
 			if self.training:
 				for i,e in enumerate(static_input):
 					self.static_record[i].add(e)
-			else:
+			elif False:
 				for i,e in enumerate(self.static_record):
 					if static_input[i] not in e:
 						raise Exception("Input %s not a previous demographic input (previous inputs were %s)" % (static_input[i],str(e)))

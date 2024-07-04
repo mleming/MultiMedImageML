@@ -76,7 +76,6 @@ class MultiInputTester:
 		self.grad_cam_group = {}
 		self.encoding_Xfile_record = None
 		self.encoding_record = None
-
 	def acc(self,database_key = None,
 						opt = None,
 						divides = None,
@@ -84,7 +83,8 @@ class MultiInputTester:
 						save = False,
 						ind = 0,
 						acc_or_auc = "acc",
-						min_pids=1):
+						min_pids=1,
+						top_not_mean=False):
 		
 		if acc_or_auc == "auc":
 			group_dict = self.pid_records.auc(ind=ind,
@@ -92,13 +92,13 @@ class MultiInputTester:
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups,
-					min_pids=min_pids)
+					min_pids=min_pids,top_not_mean=top_not_mean)
 		elif acc_or_auc == "acc":
 			group_dict = self.pid_records.acc(database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups,
-					min_pids = min_pids)
+					min_pids = min_pids,top_not_mean=top_not_mean)
 		else:
 			raise Exception("Invalid arg for acc_or_auc: %s" % acc_or_auc)
 		if save:
@@ -120,18 +120,20 @@ class MultiInputTester:
 			divides = None,
 			same_pids_across_groups = False,
 			min_pids = 1,
-			do_adjust_text=True):
+			do_adjust_text=True,top_not_mean=False):
 		
 		group_set = self.acc(
 					database_key = database_key,
 					opt = opt,
 					divides = divides,
 					same_pids_across_groups = same_pids_across_groups,
-					ind=ind,
-					acc_or_auc=acc_or_auc,
-					min_pids=min_pids
+					ind = ind,
+					acc_or_auc = acc_or_auc,
+					min_pids = min_pids,top_not_mean=top_not_mean
 				)
 		assert(group_set is not None)
+		if len(group_set) == 0:
+			raise NotEnoughPatients("Not enough patients in plot...?")
 		plt.clf()
 		texts = []
 		for group in group_set:
@@ -149,7 +151,9 @@ class MultiInputTester:
 				y = group_set[group][x_axis_opts]
 				if x_axis_opts == "images": assert(y > 0)
 			plt.scatter(y,x,c='blue',label=group)
-			texts.append(plt.text(y,x,group[:20],fontsize=16))
+			if len(group_set) <=15:
+				texts.append(plt.text(y,x,group[:20],fontsize=16))
+			else: do_adjust_text = False
 		out_plot_folder = os.path.join(self.out_record_folder,"plots")
 		os.makedirs(out_plot_folder,exist_ok=True)
 		database_key_title = database_key.replace("/","_")
@@ -158,6 +162,7 @@ class MultiInputTester:
 			f"{database_key_title}_{x_axis_opts}_{acc_or_auc}_{opt}_same_pids_{same_pids_across_groups}.png")
 		xlabel = "# " + x_axis_opts.replace("_"," ").title()
 		if same_pids_across_groups:
+			assert(group_set[group]["patients"] >= min_pids)
 			xlabel = xlabel + " (%s Patients)" % (group_set[group]["patients"])
 		plt.xlabel(xlabel,fontsize=16)
 		plt.ylabel(acc_or_auc.upper(),fontsize=16)
@@ -172,6 +177,7 @@ class MultiInputTester:
 			pr (BatchRecord) : Image batch
 		
 		"""
+		
 		y_pred = self.model(pr,
 			return_regress = True
 			,record_encoding=record_encoding)
@@ -190,7 +196,7 @@ class MultiInputTester:
 				pr.pid,
 				pr.get_X_files(),
 				age_encode = self.model.encode_age,
-				static_inputs = [] if self.model.static_dropout \
+				static_inputs = [] if not self.model.use_static_input \
 					else pr.get_static_inputs()
 			)
 		else:
@@ -203,7 +209,7 @@ class MultiInputTester:
 					im.get_ID(),
 					im.npy_file,
 					age_encode = self.model.encode_age,
-					static_inputs = [] if self.model.static_dropout \
+					static_inputs = [] if not self.model.use_static_input \
 					else pr.get_static_inputs()
 				)
 		return
@@ -396,10 +402,12 @@ class MultiInputTester:
 				" multilabel models (Y_dim: %s)") % str(pr.Y_dim))
 		
 		Y = pr.get_Y()
-		y_pred = self.model(pr.get_X(),grad_eval=True)
+		
+		#y_pred = self.model(pr.get_X(),dates=pr.get_dates(),bdate=pr.get_bdate(),static_input=pr.get_static_input()grad_eval=True)
+		y_pred = self.model(pr,grad_eval=True)
 		
 		ymax = Y.argmax(dim=2)
-
+		
 		y_pred[:,:,ymax].backward()
 		
 		gradients = self.model.get_activations_gradient()
@@ -458,6 +466,7 @@ class MultiInputTester:
 						os.path.join(out_folder,orig_name)):
 					os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
 		return t
+	
 	def out_grad_cam_groups(self,prefix=None):
 		if prefix is None:
 			out_folder = os.path.join(self.out_record_folder,"grads")
@@ -486,11 +495,12 @@ class NotEnoughPatients(Exception):
 		self.message = message
 	
 class _StatsRecord():
-	def __init__(self,out_record_folder,name,test_name=""):
+	def __init__(self,out_record_folder,_name,test_name=""):
 		self.test_name=test_name
+		self._name=_name
 		self.out_record_folder = out_record_folder
 		os.makedirs(out_record_folder,exist_ok=True)
-		self.name = self.get_name(self.out_record_folder,name,self.test_name)
+		self.name = self.get_name(self.out_record_folder,self._name,self.test_name)
 		self.x_files_read = set()
 		self.pids_read = set()
 		self.all_acc = None
@@ -502,6 +512,7 @@ class _StatsRecord():
 		self.out_record = {}
 		self.out_conf_record = {}
 		self.all_IDs = None
+		self.out_C = False
 	def get_name(self,out_record_folder,name,test_name):
 		if self.test_name != "":
 			n,ext = os.path.splitext(name)
@@ -528,14 +539,14 @@ class _StatsRecord():
 			y_pred = np.expand_dims(y_pred,axis=1)
 		assert(len(Y.shape) == 3)
 		assert(len(y_pred.shape) == 3)
-		if self.all_Y is None: self.all_Y = Y
-		else: self.all_Y = np.concatenate((self.all_Y,Y),axis=0)
-		if self.all_y_pred is None: self.all_y_pred = y_pred
-		else: self.all_y_pred = np.concatenate((self.all_y_pred,y_pred),axis=0)
-		if self.all_C is None: self.all_C = C
-		else: self.all_C = np.concatenate((self.all_C,C),axis=0)
-		if self.all_c_pred is None: self.all_c_pred = c_pred
-		else:
+		if self.all_Y is None and self.out_C: self.all_Y = Y
+		elif self.out_C: self.all_Y = np.concatenate((self.all_Y,Y),axis=0)
+		if self.all_y_pred is None and self.out_C: self.all_y_pred = y_pred
+		elif self.out_C: self.all_y_pred = np.concatenate((self.all_y_pred,y_pred),axis=0)
+		if self.all_C is None and self.out_C: self.all_C = C
+		elif self.out_C: self.all_C = np.concatenate((self.all_C,C),axis=0)
+		if self.all_c_pred is None and self.out_C: self.all_c_pred = c_pred
+		elif self.out_C:
 			self.all_c_pred = np.concatenate((self.all_c_pred,c_pred),axis=0)
 		if self.all_IDs is None:
 			self.all_IDs = set([ID])
@@ -559,12 +570,13 @@ class _StatsRecord():
 							'age_encode' : age_encode,
 							'static_inputs' : [str(_) for _ in list(static_inputs)]
 							})
-		for l,X_file in enumerate(X_files):
-			if X_file not in self.out_conf_record: self.out_conf_record[X_file] = {}
-			self.out_conf_record[X_file] = {
-					'C' : [[float(C[l,j,k]) for k in range(C.shape[2])] for j in range(C.shape[1])],
-					'c_pred': [[float(c_pred[l,j,k]) for k in range(c_pred.shape[2])] for j in range(c_pred.shape[1])]
-				}
+		if self.out_C:
+			for l,X_file in enumerate(X_files):
+				if X_file not in self.out_conf_record: self.out_conf_record[X_file] = {}
+				self.out_conf_record[X_file] = {
+						'C' : [[float(C[l,j,k]) for k in range(C.shape[2])] for j in range(C.shape[1])],
+						'c_pred': [[float(c_pred[l,j,k]) for k in range(c_pred.shape[2])] for j in range(c_pred.shape[1])]
+					}
 	def output_auc(self):
 		self.all_auroc = []
 		self.all_c_auroc = []
@@ -584,17 +596,18 @@ class _StatsRecord():
 					print("Mismatched shape")
 					print("all_Y.shape: %s"%str(all_Y.shape))
 					print("all_y_pred.shape: %s"%str(all_y_pred.shape))
-		for j in range(min(self.all_C.shape[1],self.all_c_pred.shape[1])):
-			cc = []
-			for k in range(min(self.all_C.shape[2],self.all_c_pred.shape[2])):
-				with warnings.catch_warnings():
-					warnings.simplefilter("ignore")
-					fpr, tpr, thresholds = roc_curve(
-									self.all_C[:,j,k],
-									self.all_c_pred[:,j,k])
-					cc.append(auc(fpr,tpr))
-			self.all_c_auroc.append(cc)
-	def record(self):
+		if self.out_C:
+			for j in range(min(self.all_C.shape[1],self.all_c_pred.shape[1])):
+				cc = []
+				for k in range(min(self.all_C.shape[2],self.all_c_pred.shape[2])):
+					with warnings.catch_warnings():
+						warnings.simplefilter("ignore")
+						fpr, tpr, thresholds = roc_curve(
+										self.all_C[:,j,k],
+										self.all_c_pred[:,j,k])
+						cc.append(auc(fpr,tpr))
+				self.all_c_auroc.append(cc)
+	def record(self,reset=False):
 		self.out_record_file = os.path.join(
 			self.out_record_folder,"%s.json" % self.name)
 		self.out_record_file_txt=os.path.join(
@@ -603,21 +616,26 @@ class _StatsRecord():
 			self.out_record_folder,"%s_conf.json" % self.name)
 		self.out_conf_record_file_txt = os.path.join(
 			self.out_record_folder,"%s_conf.txt" % self.name)
-		if self.all_Y is None:
-			print("Nothing to record")
-			return
-		self.output_auc()
+		#if self.all_Y is None:
+		#	print("Nothing to record")
+		#	return
+		#if self.out_C:
+		#	self.output_auc()
 		with open(self.out_record_file,'w') as fileobj:
 			json.dump(self.out_record,fileobj,indent=4)
-		with open(self.out_record_file_txt,'w') as fileobj:
-			fileobj.write( "%s - # files: %d; num patients: %d; %s; %s" % \
-				(self.name,len(self.x_files_read),len(self.pids_read),
-					str(self.all_auroc),str(self.all_c_auroc)))
+		if reset:
+			self.out_record = {}
+			self.name = self.get_name(self.out_record_folder,self._name,self.test_name)
+		if self.out_C:
+			with open(self.out_record_file_txt,'w') as fileobj:
+				fileobj.write( "%s - # files: %d; num patients: %d; %s; %s" % \
+					(self.name,len(self.x_files_read),len(self.pids_read),
+						str(self.all_auroc),str(self.all_c_auroc)))
 		#json.dump(self.out_conf_record,open(self.out_conf_record_file,'w'),
 		#	indent=4)
-		with open(self.out_conf_record_file_txt,'w') as fileobj:
-			for a in self.all_c_auroc:
-				fileobj.write(str(a)+"\n")
+			with open(self.out_conf_record_file_txt,'w') as fileobj:
+				for a in self.all_c_auroc:
+					fileobj.write(str(a)+"\n")
 
 class _FileRecord:
 	def __init__(self,X_files,
@@ -726,18 +744,22 @@ class _FileRecord:
 			
 			ftypes[i] = ftypes[i].strip().upper()
 		ftypes = set(ftypes)
+		if "NONE" in ftypes:
+			ftypes.remove("NONE")
 		return ftypes
 	def get_filetypes_name_num_group(self,database_key):
 		"""Returns the number of different modalities in a given set of images
 		"""
 		ftypes = self._get_group_set(database_key)
+		if len(ftypes) == 0: return None
 		return str(len(ftypes))
 		
 	def get_filetypes_name_group(self,database_key):
 		"""Returns a list of unique modalities in a given set of images
 		"""
 		ftypes = self._get_group_set(database_key)
-		return  "\n".join(sorted(list(ftypes)))
+		if len(ftypes) == 0: return None # or len(ftypes) > 2: return None
+		return "\n".join(sorted(list(ftypes)))
 		
 	def get_acc(self):
 		return ((np.argmax(self.Y)) == (np.argmax(self.y_pred))).astype(float)
@@ -753,13 +775,11 @@ class _PIDRecord:
 	def __init__(self,
 			pid,
 			database,
-			remove_inds=[],
-			top_not_mean=False):
+			remove_inds=[]):
 		self.remove_inds=remove_inds
 		self.pid = pid
 		self.file_records = []
 		self.database = database
-		self.top_not_mean=top_not_mean
 	def add_file_record(self,
 			X_files,
 			Y,
@@ -876,7 +896,6 @@ class _AllRecords:
 			include_cbar=False,
 			min_pids=20,
 			mv_limit=0.5,
-			top_not_mean=False,
 			include_inds=[0,1],
 			x_axis_opts="images",
 			same_patients=False,
@@ -892,7 +911,6 @@ class _AllRecords:
 		self.include_cbar = include_cbar
 		self.min_pids = min_pids
 		self.mv_limit = mv_limit
-		self.top_not_mean = top_not_mean
 		self.include_inds = include_inds
 		self.x_axis_opts = x_axis_opts
 		self.same_patients = same_patients
@@ -942,21 +960,33 @@ class _AllRecords:
 					group_pids[group] = set()
 				group_dicts[group] = group_dicts[group] + group_dict[group]
 				group_pids[group].add(pid)
+		
 		if same_pids_across_groups:
-			
 			intersect_pids = None
+			groups = set()
 			for group in sorted(group_pids,key = lambda k: len(group_pids[k]), reverse=True):
-				if intersect_pids is None: intersect_pids = group_pids[group]
+				if intersect_pids is None:
+					
+					intersect_pids = group_pids[group]
+					if len(intersect_pids) < min_pids:
+						intersect_pids = None
+						break
 				else:
 					intersect = intersect_pids.intersection(group_pids[group])
 					if len(intersect) < min_pids:
 						continue
 					else:
 						intersect_pids = intersect
+						groups.add(group)
+				print("min pids, intersect pids")
+				print(min_pids)
+				print(len(intersect_pids))
+				assert(len(intersect_pids) >= min_pids)
 			if intersect_pids is None or len(intersect_pids) == 0:
 				raise NotEnoughPatients("No patients that intersect between groups")
+			
 			group_dicts_same_pid = {}
-			for group in group_dicts:
+			for group in groups:
 				filerec_list = []
 				for filerec in group_dicts[group]:
 					if filerec.pid in intersect_pids:
@@ -971,7 +1001,8 @@ class _AllRecords:
 						opt = None,
 						divides = None,
 						same_pids_across_groups = False,
-						min_pids=1
+						min_pids=1,
+						top_not_mean=False
 						):
 		"""Returns set of prediction arrays with the 
 		
@@ -994,12 +1025,13 @@ class _AllRecords:
 				assert(len(filerec.y_pred.shape) == 2)
 				if filerec.pid not in group_stat[group]:
 					group_stat[group][filerec.pid] = (filerec.Y,filerec.y_pred,1,set(filerec.X_files))
-				else:
+				elif not top_not_mean:
 					Y_all,y_pred_all,image_count,image_set = group_stat[group][filerec.pid]
 					group_stat[group][filerec.pid] = (filerec.Y+Y_all,
 											filerec.y_pred+y_pred_all,
 											image_count+1,image_set.union(set(filerec.X_files)))
-		
+				
+
 		# Mean by patient ID
 		for group in group_stat:
 			Y_all_group = None
@@ -1008,6 +1040,8 @@ class _AllRecords:
 			image_count = 0
 			image_sets = set()
 			assert(len(group_stat[group]) > 0)
+			if same_pids_across_groups:
+				assert(len(group_stat[group]) >= min_pids)
 			for pid in group_stat[group]:
 				Y_all,y_pred_all,imc,image_set = group_stat[group][pid]
 				if Y_all_group is None:
@@ -1042,7 +1076,7 @@ class _AllRecords:
 				opt : str = None,
 				divides : list = None,
 				same_pids_across_groups : bool = False,
-				min_pids=1) -> dict:
+				min_pids=1,top_not_mean=False) -> dict:
 		"""Returns the AUROC of the test
 		
 		Args:
@@ -1059,7 +1093,7 @@ class _AllRecords:
 						database_key = database_key,
 						opt=opt,divides=divides,
 						same_pids_across_groups=same_pids_across_groups,
-						min_pids=min_pids)
+						min_pids=min_pids,top_not_mean=top_not_mean)
 		group_aucs = {}
 		for group in group_stat:
 			Ys,y_preds,image_count,patient_count = group_stat[group]
@@ -1078,7 +1112,8 @@ class _AllRecords:
 				divides : list = None,
 				same_pids_across_groups : bool = False,
 				save : bool = False,
-				min_pids : int = 1) -> dict:
+				min_pids : int = 1,
+				top_not_mean=False) -> dict:
 		"""Returns the accuracy of the test
 		
 		Args:
@@ -1097,7 +1132,8 @@ class _AllRecords:
 						opt = opt,
 						divides = divides,
 						same_pids_across_groups = same_pids_across_groups,
-						min_pids=min_pids)
+						min_pids=min_pids,
+						top_not_mean=top_not_mean)
 		group_accs = {}
 		for group in group_stat:
 			Ys,y_preds,image_count,patient_count = group_stat[group]
@@ -1109,14 +1145,15 @@ class _AllRecords:
 		assert(group_accs is not None)
 		return group_accs
 	
-	def get_group_auc(self,group,mv_limit=0.5):
+	def get_group_auc(self,group,top_not_mean=False,mv_limit=0.5):
 		assert(group in self.group_set)
 		Ys= []
 		y_preds = []
 		n_images_total = 0
 		for pid in self.group_pid_sets[group]:
 			pid_record = self.pid_records[pid]
-			val = pid_record.get_mean_group(group,mv_limit=mv_limit)
+			val = pid_record.get_mean_group(group,top_not_mean=top_not_mean,
+				mv_limit=mv_limit)
 			if val == -1: continue
 			y_,yp_,n_images = val
 			Ys.append(y_)
@@ -1161,14 +1198,15 @@ class _AllRecords:
 		if c == 0: return -1
 		mean_auc = mean_auc / c
 		return mean_auc,tot_n_patients,n_images_total,np.mean(Ys[:,0])
-	def get_group_acc(self,group,mv_limit=0.5):
+	def get_group_acc(self,group,top_not_mean=False,mv_limit=0.5):
 		assert(group in self.group_set)
 		Ys= []
 		y_preds = []
 		n_images_total = 0
 		for pid in self.group_pid_sets[group]:
 			pid_record = self.pid_records[pid]
-			val = pid_record.get_mean_group(group,mv_limit=mv_limit)
+			val = pid_record.get_mean_group(group,top_not_mean=top_not_mean,
+				mv_limit=mv_limit)
 			if val == -1:
 				#print("Skipping %s" % pid)
 				continue

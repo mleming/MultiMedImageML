@@ -131,6 +131,7 @@ class ImageRecord(Record):
 		static_inputs (list): A list of values that may be called to put into the model as text (e.g. "SEX", "AGE")
 		static_input_res (list): The values once they're looked up from the database (e.g. "MALE", "22")
 		cache (bool): If true, caches the image file as a .npy array. Takes up extra space but it's recommended. (default True)
+		npy_file (bool): Path of the cached record
 		npy_file (str): Path of the cached .npy record
 		exam_date (datetime): Date that the image was taken, if it can be read in from the database/dicom records (default None)
 		bdate (datetime): Birth date of the patient, if it can be read in from the database/dicom records (default None)
@@ -291,13 +292,21 @@ class ImageRecord(Record):
 			return self.y_nums
 		self.y_nums = self.database.get_label_encode(self.npy_file)
 		return self.y_nums
-	def _get_C(self):
+	def _get_C(self,return_lim=False):
 		"""Returns confound array"""
 		
 		if self.c_nums is not None:
+			if return_lim:
+				return self.c_nums,self.c_lims
+			else: return self.c_nums
+		if return_lim:
+			self.c_nums,self.c_lims = self.database.get_confound_encode(
+										self.npy_file,
+										return_lim=True)
+			return self.c_nums,self.c_lims
+		else:
+			self.c_nums = self.database.get_confound_encode(self.npy_file)
 			return self.c_nums
-		self.c_nums = self.database.get_confound_encode(self.npy_file)
-		return self.c_nums
 	def get_Y(self):
 		if self.Y is not None:
 			return self.Y
@@ -309,23 +318,43 @@ class ImageRecord(Record):
 		for i,j in enumerate(y_nums):
 			self.Y[i,j] = 1
 		return self.Y
-	def get_C(self):
+	def get_C(self,return_lim=False):
 		if self.C is not None:
 			return self.C
-		c_nums = self._get_C()
+		if return_lim:
+			c_nums,c_lims = self._get_C(return_lim=True)
+			if np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())) > self.C_dim[0]:
+				print(np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())))
+				print(self.C_dim)
+				assert(np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())) <= self.C_dim[0])
+		else:
+			c_nums = self._get_C()
 		if self.dtype == "numpy":
 			self.C = np.zeros(self.C_dim)
 		elif self.dtype == "torch":
 			self.C = torch.zeros(self.C_dim)
-		for i,j in enumerate(c_nums):
-			self.C[i,j] = 1
-		if self.y_on_c:
-			y_nums = self._get_Y()
-			for i,j in enumerate(y_nums):
-				self.C[i+len(self.database.confounds),j] = 1
-		return self.C
+		if return_lim:
+			k = 0
+			for i,j in enumerate(c_nums):
+				for _ in range(c_lims[i]):
+					self.C[k,j] = 1
+					k += 1
+			if self.y_on_c:
+				y_nums = self._get_Y()
+				for i,j in enumerate(y_nums):
+					self.C[k,j] = 1
+					k += 1
+			return self.C
+		else:
+			for i,j in enumerate(c_nums):
+				self.C[i,j] = 1
+			if self.y_on_c:
+				y_nums = self._get_Y()
+				for i,j in enumerate(y_nums):
+					self.C[i+len(self.database.confounds),j] = 1
+			return self.C
 		
-	def get_C_dud(self):
+	def get_C_dud(self,return_lim = False):
 		"""Returns an array of duds with the same dimensionality as C
 		
 		Returns an array of duds with the same dimensionality as C but with all
@@ -335,14 +364,27 @@ class ImageRecord(Record):
 		
 		if self.dtype == "numpy":
 			C_dud = np.zeros(self.C_dim)
-			C_dud[:len(self.database.confounds),0] = 1
 		elif self.dtype == "torch":
 			C_dud = torch.zeros(self.C_dim)
-			C_dud[:len(self.database.confounds),0] = 1
-		if self.y_on_c:
+		
+		if return_lim:
+			c_nums,c_lims = self._get_C(return_lim=True)
+			k = 0
 			y_nums = self._get_Y()
+			for i,j in enumerate(c_nums):
+				for l in range(c_lims[i]):
+					C_dud[k,l] = 1
+					k += 1
+			
 			for i,j in enumerate(y_nums):
-				C_dud[i+len(self.database.confounds),j] = 1
+				C_dud[k,j] = 1
+				k += 1
+		else:
+			C_dud[:len(self.database.confounds),0] = 1
+			if self.y_on_c:
+				y_nums = self._get_Y()
+				for i,j in enumerate(y_nums):
+					C_dud[i+len(self.database.confounds),j] = 1
 		return C_dud
 		
 class BatchRecord():
@@ -395,13 +437,17 @@ class BatchRecord():
 		return 'BatchRecord'
 	def get_text_records(self):
 		return
+	def shift_order(self):
+		m = len(self.image_records)
+		for i,c in enumerate(self.call_order):
+			self.call_order[i] = (c + 1) % m
 	def sort_order(self,scramble=False,batch_size=None):
 		self.call_order = list(range(min(len(self.image_records),self.batch_size)))
 		if scramble:
 			random.shuffle(self.call_order)
 		if batch_size is not None and batch_size < min(len(self.image_records),self.batch_size):
 			self.call_order = self.call_order[:min(len(self.image_records),self.batch_size)]
-	def _get(self,callback,augment=False):
+	def _get(self,callback,return_lim = False,augment=False):
 		Xs = []
 		no_arr = False
 		if callback == "Y" and self.batch_by_pid:
@@ -432,9 +478,9 @@ class BatchRecord():
 			elif callback == "Y":
 				X = im.get_Y()
 			elif callback == "C":
-				X = im.get_C()
+				X = im.get_C(return_lim=return_lim)
 			elif callback == "C_dud":
-				X = im.get_C_dud()
+				X = im.get_C_dud(return_lim=return_lim)
 			elif callback == "birth_dates":
 				X = im.get_birth_date()
 				no_arr = True
@@ -476,10 +522,10 @@ class BatchRecord():
 		return self._get("X",augment=augment)
 	def get_Y(self):
 		return self._get("Y")
-	def get_C(self):
-		return self._get("C")
-	def get_C_dud(self):
-		return self._get("C_dud")
+	def get_C(self,return_lim=False):
+		return self._get("C",return_lim=return_lim)
+	def get_C_dud(self,return_lim=False):
+		return self._get("C_dud",return_lim=return_lim)
 	def get_exam_dates(self):
 		return self._get("exam_dates")
 	def get_birth_dates(self):

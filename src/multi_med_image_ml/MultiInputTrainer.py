@@ -41,7 +41,8 @@ class MultiInputTrainer:
 		checkpoint_dir = None,
 		name = 'experiment_name',
 		verbose = False,
-		save_latest_freq = 100):
+		save_latest_freq = 100,
+		return_lim = True):
 		
 		# Core variables for training the self.model
 		self.model = model
@@ -80,7 +81,7 @@ class MultiInputTrainer:
 		self.regress = regress
 		self.index = 0
 		self.one_step = True
-				
+		self.return_lim=return_lim
 		# Outputs images of the loss function over time
 		self.loss_image_dir = loss_image_dir
 		if self.loss_image_dir is not None:
@@ -171,7 +172,7 @@ class MultiInputTrainer:
 			Y = pr.get_Y()
 			self.log_time("4. Get Y")
 			self.loss_Y = self.loss_function(y_pred,Y)
-			self.loss_C_dud = self.loss_function(y_reg,pr.get_C_dud())
+			self.loss_C_dud = self.loss_function(y_reg,pr.get_C_dud(return_lim=self.return_lim))
 			self.loss_classifier = self.loss_Y + (self.loss_C_dud)
 			if self.model.variational:
 				self.loss_kl = self.model.kl * 0.0005
@@ -182,10 +183,10 @@ class MultiInputTrainer:
 		else:
 			if self.regress:
 				self.loss_regressor = \
-					self.loss_function(y_reg,pr.get_C())
+					self.loss_function(y_reg,pr.get_C(return_lim=self.return_lim))
 			else:
 				self.loss_regressor = \
-					self.loss_function(y_reg,pr.get_C_dud())
+					self.loss_function(y_reg,pr.get_C_dud(return_lim=self.return_lim))
 			self.log_time("4. Regress loss")
 			self.loss_regressor.backward()
 			self.log_time("5. Regress loss backward")

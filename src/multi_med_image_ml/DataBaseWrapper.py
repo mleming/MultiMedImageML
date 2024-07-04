@@ -190,7 +190,7 @@ class DataBaseWrapper:
 				self.uniques[c]["nonnan_list"][0] = min_
 				assert(len(self.uniques[c]["nonnan_list"]) == \
 					self.n_buckets_cont)
-	def get_confound_encode(self,npy_file: str) -> list:
+	def get_confound_encode(self,npy_file: str,return_lim=False) -> list:
 		"""Returns list of integers that represent the confounds of a given input file
 	
 		Args:
@@ -198,12 +198,13 @@ class DataBaseWrapper:
 		
 		Returns:
 			cnum_list (list): A list of integers indicating the nth confound of the datapoint
-	
+			return_lim (bool): If true, also returns the number of total confounds, as a second value (default False)
 		"""
 		
 		assert(os.path.splitext(npy_file)[1] == ".npy")
 		confound_strs = [self.loc_val(npy_file,c) for c in self.confounds]
 		cnum_list = []
+		if return_lim: clim_list = []
 		for j,c in enumerate(self.confounds):
 			if self.uniques[c]["discrete"]:
 				c_uniques = self.uniques[c]["unique"]
@@ -211,6 +212,7 @@ class DataBaseWrapper:
 					cnum_list.append(-1)
 				else:
 					cnum_list.append(c_uniques.index(confound_strs[j]))
+				if return_lim: clim_list.append(len(c_uniques))
 			else:
 				max_ = self.uniques[c]["max"]
 				min_ = self.uniques[c]["min"]
@@ -223,7 +225,11 @@ class DataBaseWrapper:
 							unnl[kk+1] >= confound_strs[j]:
 							cnum_list.append(kk)
 							break
+				if return_lim: clim_list.append(len(unnl))
 		assert(len(cnum_list) == len(self.confounds))
+		if return_lim:
+			assert(len(cnum_list) == len(clim_list))
+			return cnum_list,clim_list
 		return cnum_list
 	def get_label_encode(self,npy_file: str):
 		"""Returns list of integers that represent the confounds of a given input file
