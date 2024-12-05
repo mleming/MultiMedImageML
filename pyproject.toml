@@ -2,7 +2,7 @@
 
 name = "multi_med_image_ml"
 
-version = "0.1.0"
+version = "1.0.0"
 
 dependencies = [
   "numpy>=1.22.0",

@@ -58,23 +58,24 @@ class DataBaseWrapper:
 		else:
 			raise Exception("DatabaseWrapper cannot have no inputs")
 		if len(self.precedence) > 0:
-			label_ID = {}
 			if "PatientID" in self.columns:
 				pid_key = "PatientID"	
 			elif "Patient ID" in self.columns:
 				pid_key = "Patient ID"
-			for index in self.database.index:
-				PID = self.database.loc[index,pid_key]
-				l = self.database.loc[index,self.labels[0]]
-				if is_nan(l):
-					continue
-				if PID not in label_ID or (self.precedence.index(l) < self.precedence.index(label_ID[PID])):
-					label_ID[PID] = l
-			for index in self.database.index:
-				PID = self.database.loc[index,pid_key]
-				#self.database.loc[index,self.labels[0]] = label_ID[PID]
-				if PID in label_ID:
-					self.database.at[index,self.labels[0]] = label_ID[PID]
+			for label in self.labels:
+				label_ID = {}
+				for index in self.database.index:
+					PID = self.database.loc[index,pid_key]
+					l = self.database.loc[index,label]
+					if is_nan(l):
+						continue
+					if PID not in label_ID or (self.precedence.index(l) < self.precedence.index(label_ID[PID])):
+						label_ID[PID] = l
+				for index in self.database.index:
+					PID = self.database.loc[index,pid_key]
+					#self.database.loc[index,self.labels[0]] = label_ID[PID]
+					if PID in label_ID:
+						self.database.at[index,label] = label_ID[PID]
 		self.jdict = []
 	def has_im(self,im: ImageRecord) -> bool:
 		"""Determines if the DataBaseWrapper contains a given ImageRecord
@@ -309,7 +310,10 @@ class DataBaseWrapper:
 			except ValueError:
 				return dateutil.parser.parse(d.replace("_"," "))
 	def get_exam_date(self,npy_file: str) -> datetime.date:
-		d = self._get_val(npy_file,["ExamEndDTS","Acquisition Date"])
+		d = self._get_val(npy_file,[
+			"ExamEndDTS",
+			"Acquisition Date",
+			"Content Date"])
 		return self.parse_date(d)
 	
 	def get_birth_date(self,npy_file: str) -> datetime.date:

@@ -80,10 +80,11 @@ class Record:
 		"""Loads in static inputs from the database"""
 		if self.static_input_res is None:
 			self.static_input_res = []
-			for key in self.static_inputs:
-				self.static_input_res.append(
-					self.database.loc_val(self.npy_file,key)
-				)
+			if self.static_inputs is not None:
+				for key in self.static_inputs:
+					self.static_input_res.append(
+						str(self.database.loc_val(self.npy_file,key))
+					)
 		return self.static_input_res
 	def _is_valid_operand(self, other):
 		return hasattr(other, "exam_date")
@@ -146,7 +147,7 @@ class ImageRecord(Record):
 		X_dim : tuple = (96,96,96),
 		dtype : str = "torch",
 		extra_info_list : list = None,
-		y_on_c : bool = True,
+		y_on_c : bool = False,
 		cache : bool = True,
 		Y_dim : tuple = (1,32),
 		C_dim : tuple = (16,32),
@@ -178,8 +179,9 @@ class ImageRecord(Record):
 		
 		self.times_called = 0
 		self.cache = cache
-	def get_image_type(self):
+	def get_image_type(self,cache=True):
 		"""Determines the type of image that self.filename is"""
+		if not cache: self.image_type = None
 		if self.image_type is None:
 			if os.path.isdir(self.filename):
 				self.image_type = "dicom_folder"
@@ -285,32 +287,52 @@ class ImageRecord(Record):
 		else: return self.X
 	def get_X_files(self):
 		return self.npy_file
-	def _get_Y(self):
+	def _get_Y(self,label=None):
 		"""Returns label"""
 		
 		if self.y_nums is not None:
-			return self.y_nums
-		self.y_nums = self.database.get_label_encode(self.npy_file)
-		return self.y_nums
-	def _get_C(self,return_lim=False):
-		"""Returns confound array"""
+			if label is None:
+				return self.y_nums
+			else:
+				return [self.y_nums[self.database.labels.index(label)]]
 		
+		self.y_nums = self.database.get_label_encode(self.npy_file)
+		if label is None:
+			return self.y_nums
+		else:
+			return [self.y_nums[self.database.labels.index(label)]]
+	
+	def _get_C(self,confound=None,return_lim=False):
+		"""Returns confound array"""
+		if confound is not None:
+			cc = self.database.confounds.index(confound)
 		if self.c_nums is not None:
-			if return_lim:
-				return self.c_nums,self.c_lims
-			else: return self.c_nums
+			if confound is None:
+				if return_lim:
+					return self.c_nums,self.c_lims
+				else: return self.c_nums
+			else:
+				if return_lim:
+					return [self.c_nums[cc]],[self.c_lims[cc]]
+				else: [self.c_nums[cc]]
 		if return_lim:
 			self.c_nums,self.c_lims = self.database.get_confound_encode(
 										self.npy_file,
 										return_lim=True)
-			return self.c_nums,self.c_lims
+			if confound is None:
+				return self.c_nums,self.c_lims
+			else:
+				return [self.c_nums[cc]],[self.c_lims[cc]]
 		else:
 			self.c_nums = self.database.get_confound_encode(self.npy_file)
-			return self.c_nums
-	def get_Y(self):
-		if self.Y is not None:
+			if confound is None:
+				return self.c_nums
+			else: return [self.c_nums[cc]]
+		
+	def get_Y(self,label=None):
+		if self.Y is not None and label is None:
 			return self.Y
-		y_nums = self._get_Y()
+		y_nums = self._get_Y(label=label)
 		if self.dtype == "numpy":
 			self.Y = np.zeros(self.Y_dim)
 		elif self.dtype == "torch":
@@ -318,17 +340,17 @@ class ImageRecord(Record):
 		for i,j in enumerate(y_nums):
 			self.Y[i,j] = 1
 		return self.Y
-	def get_C(self,return_lim=False):
-		if self.C is not None:
+	def get_C(self,confound=None,return_lim=False):
+		if self.C is not None and confound is None:
 			return self.C
 		if return_lim:
-			c_nums,c_lims = self._get_C(return_lim=True)
+			c_nums,c_lims = self._get_C(confound=confound,return_lim=True)
 			if np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())) > self.C_dim[0]:
 				print(np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())))
 				print(self.C_dim)
 				assert(np.sum(c_lims) + (0 if self.y_on_c else len(self._get_Y())) <= self.C_dim[0])
 		else:
-			c_nums = self._get_C()
+			c_nums = self._get_C(confound=confound)
 		if self.dtype == "numpy":
 			self.C = np.zeros(self.C_dim)
 		elif self.dtype == "torch":
@@ -354,7 +376,7 @@ class ImageRecord(Record):
 					self.C[i+len(self.database.confounds),j] = 1
 			return self.C
 		
-	def get_C_dud(self,return_lim = False):
+	def get_C_dud(self,confound=None,return_lim = False):
 		"""Returns an array of duds with the same dimensionality as C
 		
 		Returns an array of duds with the same dimensionality as C but with all
@@ -447,15 +469,15 @@ class BatchRecord():
 			random.shuffle(self.call_order)
 		if batch_size is not None and batch_size < min(len(self.image_records),self.batch_size):
 			self.call_order = self.call_order[:min(len(self.image_records),self.batch_size)]
-	def _get(self,callback,return_lim = False,augment=False):
+	def _get(self,callback,label=None,confound=None, return_lim = False,augment=False):
 		Xs = []
 		no_arr = False
-		if callback == "Y" and self.batch_by_pid:
-			ys = [np.argmax(im.get_Y()) for im in self.image_records]
-			if(min(ys) != max(ys)):
-				warnings.warn(
-					"Warning: label values differ in Patient %s" % self.pid
-				)
+		#if callback == "Y" and self.batch_by_pid:
+		#	ys = [np.argmax(im.get_Y(label=label)) for im in self.image_records]
+		#	if(min(ys) != max(ys)):
+		#		warnings.warn(
+		#			"Warning: label values differ in Patient %s" % self.pid
+		#		)
 		for i,im in enumerate([self.image_records[-1]] if (callback == "Y" and self.batch_by_pid) \
 			else [self.image_records[_] for _ in self.call_order]):
 			if i >= self.batch_size: break
@@ -476,11 +498,11 @@ class BatchRecord():
 				else:
 					raise Exception("Invalid dtype: %s" % self.dtype)
 			elif callback == "Y":
-				X = im.get_Y()
+				X = im.get_Y(label=label)
 			elif callback == "C":
-				X = im.get_C(return_lim=return_lim)
+				X = im.get_C(confound=confound,return_lim=return_lim)
 			elif callback == "C_dud":
-				X = im.get_C_dud(return_lim=return_lim)
+				X = im.get_C_dud(confound=confound,return_lim=return_lim)
 			elif callback == "birth_dates":
 				X = im.get_birth_date()
 				no_arr = True
@@ -520,12 +542,12 @@ class BatchRecord():
 		return self._get("X_files")
 	def get_X(self,augment=False):
 		return self._get("X",augment=augment)
-	def get_Y(self):
-		return self._get("Y")
-	def get_C(self,return_lim=False):
-		return self._get("C",return_lim=return_lim)
-	def get_C_dud(self,return_lim=False):
-		return self._get("C_dud",return_lim=return_lim)
+	def get_Y(self,label=None):
+		return self._get("Y",label=label)
+	def get_C(self,confound=None,return_lim=False):
+		return self._get("C",confound=confound,return_lim=return_lim)
+	def get_C_dud(self,confound=None,return_lim=False):
+		return self._get("C_dud",confound=confound,return_lim=return_lim)
 	def get_exam_dates(self):
 		return self._get("exam_dates")
 	def get_birth_dates(self):

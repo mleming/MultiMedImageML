@@ -29,6 +29,13 @@ if shutil.which('dcm2niix') is None:
 else:
 	dcm2niix_installed = True
 
+def combine_covar(C1,C2,M1,M2,N1,N2):
+	M_com = (N1 * M1 + M2 * N2) / (N1 + N2)
+	N_com = N1 + N2
+	C_com = (C1 * N1 + N1 * (M1 - M_com)**2 + \
+			C2 * N2 + N2 * (M2 - M_com)** 2) / N_com
+	return C_com,M_com,N_com
+
 def compile_dicom_py(dicom_folder: str):
 	dicom2nifti.convert_directory(dicom_folder,"conv.nii.gz")
 	dicom_files = (glob.glob(os.path.join("*.dcm")))

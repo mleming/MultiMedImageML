@@ -1,4 +1,4 @@
-import torch,os
+import torch,os,json
 from torch import nn
 import numpy as np
 from .Records import BatchRecord
@@ -21,46 +21,72 @@ class MultiInputTrainer:
 		name (str): Name of the model, which is used for saving checkpoints and output graphs (default 'experiment_name')
 		optimizer (torch.optim): Adam optimizer for the encoder/classifier. Incentivized to classify by the true label and set the regressor to the same values.
 		optimizer_reg (torch.optim): Adam optimizer for the encoder/regressor. Incentivized to detect confounds from each individual image.
-		loss_image_dir (str): If set, outputs images of the loss function for the optimizers over time, for the classifier, the regressor, and the adversarial loss (default None)
+		out_record_folder (str): If set, outputs images of the loss function for the optimizers over time, for the classifier, the regressor, and the adversarial loss (default None)
 		checkpoint_dir (str): If set, saves the model and optimizer state (default None)
 		save_latest_freq (int): Number of iterations before it saves the loss image and the checkpoint (default 100)
 		batch_size (int): Batch size of the training. Due to the optional-input nature, this cannot be set in the dataloader. Only one set of images can be passed through the loop at a given time. batch_size is how frequently the backpropagation algorithm is applied after graphs have accumulated (default 64)
 		verbose (bool): Whether to print (default False)
-		one_step (bool): Boolean to determine whether optimizer (True) or optimizer_reg (False) is applied
+		update_classifier (bool): Boolean to determine whether optimizer (True) or optimizer_reg (False) is applied
 		index (int): Counts the number of iterations the trainer has gone through
 	"""
 	
 	def __init__(self,
 		model,
+		dataloader,
 		lr=1e-5,
 		betas = (0.5,0.999),
-		loss_function = nn.MSELoss(),
+		loss_function = "mse",
 		batch_size = 64,
 		regress = True,
-		loss_image_dir = None,
+		out_record_folder = None,
 		checkpoint_dir = None,
 		name = 'experiment_name',
 		verbose = False,
 		save_latest_freq = 100,
-		return_lim = True):
+		return_lim = True,
+		discriminator_optimizer='adam',
+		classifier_optimizer='adam',
+		forget_optimizer_state = False,
+		use_triplet = False):
 		
 		# Core variables for training the self.model
 		self.model = model
 		self.name = name
-
-		self.optimizer = torch.optim.Adam(
-			self.model.classifier_parameters(),
-			betas = betas,
-			lr = lr
-		)
-		self.optimizer_reg = torch.optim.Adam(
-			self.model.regressor.parameters(),
-			betas = betas,
-			lr = lr
-		)
-
+		self.dataloader = dataloader
+		self.classifier_optimizer = classifier_optimizer
+		if self.classifier_optimizer == "adam":
+			self.optimizer = torch.optim.Adam(
+				self.model.classifier_parameters(),
+				betas = betas,
+				lr = lr
+			)
+		elif self.classifier_optimizer == "sgd":
+			self.optimizer = torch.optim.SGD(
+				self.model.classifier_parameters(),
+				lr=lr
+			)
+		else:
+			raise Exception("Invalid classifier optimizer: %s" % \
+				self.classifier_optimizer)
+		self.discriminator_optimizer = discriminator_optimizer
+		if self.discriminator_optimizer == "adam":
+			self.optimizer_reg = torch.optim.Adam(
+				self.model.regressor_parameters(),
+				betas = betas,
+				lr = lr
+			)
+		elif self.discriminator_optimizer == "sgd":
+			self.optimizer_reg = torch.optim.SGD(
+				self.model.regressor_parameters(),
+				lr = lr
+			)
+		else:
+			raise Exception("Invalid value for discriminator optimizer: %s"\
+				 % self.discriminator_optimizer)
 		# Load saved or pretrained models
+		
 		self.checkpoint_dir = checkpoint_dir
+			
 		if self.checkpoint_dir is not None:
 			os.makedirs(self.checkpoint_dir,exist_ok=True)
 			self.model_file = os.path.join(
@@ -68,58 +94,64 @@ class MultiInputTrainer:
 				'%s.pt' % self.name)
 			if os.path.isfile(self.model_file):
 				state_dicts = torch.load(self.model_file)
+				if "encoded_record" in state_dicts:
+					state_dicts['model_state_dict']['encoded_record'] = state_dicts['encoded_record']
 				self.model.load_state_dict(state_dicts['model_state_dict'])
 				self.model.regressor_freeze()
-				self.optimizer.load_state_dict(
-					state_dicts['optimizer_state_dict']
-				)
-				self.optimizer_reg.load_state_dict(
-					state_dicts['optimizer_reg_state_dict']
-				)
-		self.loss_function = loss_function
+				if not forget_optimizer_state:
+					if self.classifier_optimizer == "adam":
+						self.optimizer.load_state_dict(
+							state_dicts['optimizer_state_dict']
+						)
+					if self.discriminator_optimizer == "adam":
+						self.optimizer_reg.load_state_dict(
+							state_dicts['optimizer_reg_state_dict']
+						)
+		if loss_function == "mse":
+			self.loss_function = nn.MSELoss()
+		elif loss_function == "cce":
+			self._loss_function = nn.CrossEntropyLoss()
+			def _loss(inp,target):
+				target = torch.squeeze(target,1)
+				inp = torch.squeeze(inp,1)
+				return self._loss_function(inp,target)
+			self.loss_function = _loss
+		else:
+			raise Exception("Invalid loss function: %s" % loss_function)
 		self.batch_size = batch_size
 		self.regress = regress
-		self.index = 0
-		self.one_step = True
+		self.update_classifier = True
 		self.return_lim=return_lim
 		# Outputs images of the loss function over time
-		self.loss_image_dir = loss_image_dir
+		self.out_record_folder = out_record_folder
+		self.index           = 0
+		self.loss_Y          = 0
+		self.loss_C_dud      = 0
+		self.loss_classifier = 0
+		self.loss_regressor  = 0
+		if model.variational:
+			self.loss_kl = 0
+		if self.out_record_folder is not None:
+			self.loss_image_dir = os.path.join(self.out_record_folder,'loss_ims')
+		else: self.loss_image_dir = None
 		if self.loss_image_dir is not None:
-			os.makedirs(self.loss_image_dir,exist_ok=True)
-			self.loss_image_file = os.path.join(self.loss_image_dir,
-											f"{self.name}_loss.png")
-			self.loss_vals_file  = os.path.join(self.loss_image_dir,
-											f"{self.name}_vals.npy")
 			self.pids_read = set()
 			self.x_files_read = set()
-			if os.path.isfile(self.loss_vals_file):
-				_ = np.load(self.loss_vals_file)
-				self.xs,self.ys,self.ys_2,self.ys_c_dud = \
-						[list(_[i,:]) for i in range(4)]
-				if self.model.variational:
-					self.ys_kl = list(_[4,:])
-	
-				self.loss_Y          = self.ys[-1]
-				self.loss_C_dud      = self.ys_c_dud[-1]
-				self.loss_regressor  = self.ys_2[-1]
-				if model.variational:
-					self.loss_kl = self.ys_kl[-1]
-				self.loss_classifier = self.loss_Y + self.loss_C_dud
-			else:
-				self.xs,self.ys,self.ys_2,self.ys_kl,self.ys_c_dud =\
-							[[] for _ in range(5)]
-		
-				self.loss_Y          = 0
-				self.loss_C_dud      = 0
-				self.loss_classifier = 0
-				self.loss_regressor  = 0
-				if model.variational:
-					self.loss_kl = 0
-			
+			self.loss_tracker = LossTracker(self.name,self.loss_image_dir)
+			self.loss_Y = self.loss_tracker.get_last_y_class_loss()
+			self.loss_C_dud = self.loss_tracker.get_last_y_class_adv_loss()
+			self.loss_classifier = self.loss_tracker.get_last_y_class_loss()
+			self.loss_regressor  = self.loss_tracker.get_last_y_reg_loss()
+			self.index = self.loss_tracker.get_last_xs()
+			if model.variational:
+				self.loss_kl = self.loss_tracker.get_last_y_kl_loss()
 		self.verbose = verbose
+		self.use_triplet = use_triplet
 		self.save_latest_freq = save_latest_freq
 		self.time = time()
 		self.time_dict = {}
+
+
 	def log_time(self,m):
 		t = time() - self.time
 		self.time = time()
@@ -137,9 +169,10 @@ class MultiInputTrainer:
 			mean_time = total_time / count
 			s = s + ("%s %.3f; " % (m,mean_time))
 		return s
+
+	#def euclidean(self,x,f
 	def loop(self,
-			pr: BatchRecord,
-			dataloader = None):
+			pr: BatchRecord):
 		"""Loops a single BatchRecord through one iteration
 		
 		Loops a BatchRecord through one iteration. Also switches the queues of
@@ -147,13 +180,57 @@ class MultiInputTrainer:
 		
 		Args:
 			pr (multi_med_image_ml.Records.BatchRecord): Record to be evaluated
-			dataloader (multi_med_image_ml.MedImageLoader.MedImageLoader): Database
 		"""
-		
+
 		assert(isinstance(pr,BatchRecord))
 		
 		self.reset_time()
 		x = self.model(pr,return_encoded=True)
+		label_m_x_all,conf_m_x_all,label_m_o_all,conf_m_o_all = \
+			self.model.euclidean(self.model.z_mean_.clone().detach().cpu().numpy(),
+								pr.get_X_files(),
+								dataloader = self.dataloader,
+								n_mean=256,
+								record=True,
+								target_label=self.dataloader.tl())
+		#print("---")
+		#print(f"label_m_x_all: {label_m_x_all}")
+		#print(f"conf_m_x_all: {conf_m_x_all}")
+		#print(f"label_m_o_all: {label_m_o_all}")
+		#print(f"conf_m_o_all: {conf_m_o_all}")
+		label_m_x_all,conf_m_x_all,label_m_o_all,conf_m_o_all = \
+			torch.tensor(label_m_x_all,device=self.model.device),\
+			torch.tensor(conf_m_x_all,device=self.model.device),\
+			torch.tensor(label_m_o_all,device=self.model.device),\
+			torch.tensor(conf_m_o_all,device=self.model.device)
+		mean_lx = (self.model.z_mean_ - label_m_x_all).pow(2).mean(1)
+		mean_lo = (self.model.z_mean_ - label_m_o_all).pow(2).mean(1)
+		mean_cx = (self.model.z_mean_ - conf_m_x_all).pow(2).mean(1)
+		mean_co = (self.model.z_mean_ - conf_m_o_all).pow(2).mean(1)
+		#print("self.model.z_mean_.size()")
+		#print(self.model.z_mean_.size())
+		#print("label_m_x_all.size()")
+		#print(label_m_x_all.size())
+		#mean_lx = (self.model.z_mean_ - label_m_x_all).pow(2).mean(1)
+		#print("mean_lx.size()")
+		#print(mean_lx.size())
+		if self.use_triplet:
+			triplet_loss_l,triplet_loss_c = self.model.triplet_all(x,pr.get_X_files(),
+										dataloader = self.dataloader,
+										record_only = not self.update_classifier)
+		else:
+			triplet_loss_l,triplet_loss_c = torch.tensor(0.0),torch.tensor(0.0)
+		#self.label_m = triplet_loss_l
+		#self.conf_m  = triplet_loss_c
+		#mean_co = (self.model.z_mean_ - conf_m_o_all).pow(2).mean(1)
+		#mean_co = torch.max(torch.zeros(mean_co.size(),
+		#			device=self.model.device), mean_co - 0.2)
+
+		self.label_m =  (mean_lx - mean_lo).mean()
+		self.conf_m =  (mean_co - mean_cx).mean()
+		l_or_c = self.dataloader.stack
+		tl_v = self.dataloader.tl()
+
 		self.log_time("1. Encode run")
 		if pr.get_text_records:
 			x_text = encode_static_inputs(
@@ -162,73 +239,123 @@ class MultiInputTrainer:
 					)
 			x = torch.concat(x,x_text,axis=0)
 		self.log_time("2. Encode static")
-		y_pred,y_reg = self.model(x,
-				encoded_input=True,
-				dates=pr.get_exam_dates(),
-				bdate=pr.get_birth_dates()[0],
-				static_input = pr.get_static_inputs())
+		
 		self.log_time("3. Run encoded")
-		if self.one_step:
-			Y = pr.get_Y()
-			self.log_time("4. Get Y")
-			self.loss_Y = self.loss_function(y_pred,Y)
-			self.loss_C_dud = self.loss_function(y_reg,pr.get_C_dud(return_lim=self.return_lim))
-			self.loss_classifier = self.loss_Y + (self.loss_C_dud)
+		
+		if self.update_classifier:
 			if self.model.variational:
-				self.loss_kl = self.model.kl * 0.0005
-				self.loss_classifier = self.loss_classifier + self.loss_kl
+				self.loss_kl = self.model.kl * 0.05
+			if self.dataloader.stack == "Labels":
+				y_pred,y_reg = self.model(x,
+						encoded_input=True,
+						dates=pr.get_exam_dates(),
+						bdate=pr.get_birth_dates()[0],
+						static_input = pr.get_static_inputs(),
+						target_label = self.dataloader.tl()
+					)
+				Y = pr.get_Y(label=self.dataloader.tl())
+				self.log_time("4. Get Y")
+				self.loss_Y = self.loss_function(y_pred,Y)
+				self.loss_classifier = self.loss_Y
+				#self.loss_classifier = self.loss_classifier + self.conf_m + self.label_m
+			elif self.dataloader.stack == "Confounds":
+				y_pred,y_reg = self.model(x,
+						encoded_input=True,
+						dates=pr.get_exam_dates(),
+						bdate=pr.get_birth_dates()[0],
+						static_input = pr.get_static_inputs(),
+						target_confound = self.dataloader.tl(),
+						return_regress = True
+					)
+				c_dud = pr.get_C_dud(
+										return_lim=self.return_lim,
+										confound=self.dataloader.tl())
+				if c_dud.size() != y_reg.size():
+					
+					print(c_dud.size()) # 1,32
+					print(y_reg.size()) # 1,1
+				assert(c_dud.size() == y_reg.size())
+				#Y = pr.get_Y(label=self.dataloader.tl())
+				self.loss_C_dud = self.loss_function(y_reg,c_dud)
+
+				self.loss_classifier = self.loss_C_dud
+				#self.loss_classifier = self.loss_classifier + self.conf_m + self.label_m
+			else:
+				raise Exception("Invalid dl mode: %s" % self.dataloader.stack)
+			#self.loss_classifier = self.loss_Y + (self.loss_C_dud)
+			#if self.model.variational:
+			#	self.loss_kl = self.model.kl * 0.05
+			#	print("self.loss_kl.size()")
+			#	print(self.loss_kl.size())
+			#	self.loss_classifier = self.loss_classifier + self.loss_kl
+			#self.loss_classifier = self.loss_classifier + self.conf_m - self.label_m
+			#if not self.has_var('x_grad'): self.x_grad = 0
+			#self.x_grad = self.x_grad + x
 			self.log_time("5. Loss additions")
+			self.loss_classifier = self.loss_classifier + self.label_m + self.conf_m
+			if self.model.variational:
+				self.loss_classifier = self.loss_classifier + self.loss_kl
 			self.loss_classifier.backward()
 			self.log_time("6. Loss backward")
+			self.dataloader.switch_stack()
 		else:
+			y_pred,y_reg = self.model(x,
+					encoded_input=True,
+					dates=pr.get_exam_dates(),
+					bdate=pr.get_birth_dates()[0],
+					static_input = pr.get_static_inputs(),
+					target_confound = self.dataloader.tl()
+				)
 			if self.regress:
 				self.loss_regressor = \
-					self.loss_function(y_reg,pr.get_C(return_lim=self.return_lim))
+					self.loss_function(y_reg,pr.get_C(
+						confound=self.dataloader.tl(),
+						return_lim=self.return_lim))
 			else:
 				self.loss_regressor = \
-					self.loss_function(y_reg,pr.get_C_dud(return_lim=self.return_lim))
+					self.loss_function(y_reg,pr.get_C_dud(
+						confound=self.dataloader.tl(),
+						return_lim=self.return_lim))
+				
 			self.log_time("4. Regress loss")
 			self.loss_regressor.backward()
 			self.log_time("5. Regress loss backward")
 		
 		if self.loss_image_dir is not None:
-			
-			self.ys.append(float(self.loss_Y))
-			self.ys_2.append(float(self.loss_regressor))
-			self.xs.append(self.index)
-			if self.model.variational:
-				self.ys_kl.append(float(self.loss_kl))
-			self.ys_c_dud.append(float(self.loss_C_dud))
+			self.loss_tracker.update(
+					y_class_loss = self.loss_Y,
+					y_reg_loss = self.loss_regressor,
+					xs = self.index,
+					y_kl_loss = None if not self.model.variational \
+									else float(torch.mean(self.loss_kl)),
+					y_class_adv_loss = self.loss_C_dud,
+					target = tl_v,
+					label_or_confound = l_or_c,
+					label_m = float(torch.mean(self.label_m)) if float(torch.mean(self.label_m)) != 0 else None,
+					conf_m = float(torch.mean(self.conf_m)) if float(torch.mean(self.conf_m)) != 0 else None
+			)
 			self.log_time("7. Loss record append")
-		if self.verbose:
-			if self.model.variational:
-				print(("%d: Class: %.6f, KL: %.6f, Dud: "+\
-					"%.6f, Reg: %.6f (%d, %d) | %s") % \
-					(i,float(loss_Y), float(loss_kl), float(loss_C_dud),
-					float(loss_regressor),len(self.pids_read),
-					len(self.x_files_read),self.name))
-			else:
-				print("%d: Class: %.6f, Dud: %.6f, Reg: %.6f (%d, %d) | %s" % \
-					(i,float(loss_Y), float(loss_C_dud),
-					float(loss_regressor),len(self.pids_read),
-					len(self.x_files_read),self.name))
+
+		self.dataloader.rotate_labels()
 		
 		# Apply updates to the optimizer
 		if self.index % self.batch_size == 0 and self.index != 0:
-			if self.one_step:
+			if self.update_classifier:
 				self.optimizer.step()
 				self.optimizer.zero_grad()
 				self.model.classifier_freeze()
-				if dataloader is not None:
-					dataloader.switch_stack()
+				if self.dataloader.stack == "Labels":
+					self.dataloader.switch_stack()
+				#if self.use_triplet:
+				self.model.reset_encoded()
 			else:
 				self.optimizer_reg.step()
 				self.optimizer_reg.zero_grad()
 				self.model.regressor_freeze()
-				if dataloader is not None:
-					dataloader.switch_stack()
+				if self.dataloader.stack == "Confounds":
+					self.dataloader.switch_stack()
 			self.log_time("8. One step")
-			self.one_step = not self.one_step
+			self.update_classifier = not self.update_classifier
 		
 		if self.index % self.save_latest_freq == 0 and self.index != 0:
 			if self.checkpoint_dir is not None:
@@ -241,36 +368,226 @@ class MultiInputTrainer:
 				)
 				self.log_time("9. Save state dict")
 			if self.loss_image_dir is not None:
-				plt.plot(list(range(len(self.xs))),self.ys,
-					label="Classifier loss - label")
-				if self.regress:
-					plt.plot(list(range(len(self.xs))),
-						self.ys_2,
-						label="Regressor loss")
-				if self.model.variational:
-					plt.plot(list(range(len(self.xs))),
-						self.ys_kl,
-						label="KL Loss")
-				plt.plot(list(range(len(self.xs))),
-					self.ys_c_dud,label="Classifier loss - adversarial")
-				plt.legend(loc='upper right')
-				plt.savefig(self.loss_image_file)
+				self.loss_tracker.plot()
+				self.loss_tracker.plot(smooth=True,log_yscale=False,temptitle="_smooth")
+				self.loss_tracker.plot(smooth=False,log_yscale=True,temptitle="_log")
+				self.loss_tracker.plot(smooth=True,log_yscale=True,temptitle="_slog")
+				self.loss_tracker.save()
+				#os.makedirs(os.path.join(self.loss_image_dir,"dist_ims"),exist_ok=True)
+				#self.model.full_encoded(os.path.join(self.loss_image_dir,"dist_ims","dist_%d.png" % self.index))
 				self.log_time("10. Plot fig")
-				plt.clf()
-				
-				if self.model.variational:
-					np.save(self.loss_vals_file,np.array([self.xs,
-													self.ys,
-													self.ys_2,
-													self.ys_c_dud,
-													self.ys_kl]))
-				else:
-					np.save(self.loss_vals_file,np.array([self.xs,
-													self.ys,
-													self.ys_2,
-													self.ys_c_dud]))
-				self.log_time("11. Save arrays")
 		self.index += 1
 
 	def test(self):
 		return
+
+class LossTracker:
+	def __init__(self,name,loss_image_dir):
+		self.loss_image_dir=loss_image_dir
+		os.makedirs(self.loss_image_dir,exist_ok=True)
+		self.name=name
+		self.loss_image_file = os.path.join(self.loss_image_dir,
+										f"{self.name}_loss.png")
+		self.loss_vals_file  = os.path.join(self.loss_image_dir,
+										f"{self.name}_vals.json")
+		self.y_class_loss = {}
+		self.xs = {}
+		self.y_reg_loss = {}
+		self.y_kl_loss = []
+		self.y_class_adv_loss = {}
+		self.label_m = []
+		self.conf_m = []
+		self.label_m_xs = []
+		self.conf_m_xs = []
+		if os.path.isfile(self.loss_vals_file):
+			self.load()
+			self.plot()
+			self.plot(smooth=True,log_yscale=False,temptitle="_smooth")
+			self.plot(smooth=False,log_yscale=True,temptitle="_log")
+
+	def add_target(self,target,label_or_confound):
+		if target not in self.xs: self.xs[target] = []
+		if label_or_confound == "Labels":
+			if target not in self.y_class_loss: self.y_class_loss[target]=[]
+		elif label_or_confound == "Confounds":
+			if target not in self.y_class_adv_loss:
+				self.y_class_adv_loss[target] = []
+			if target not in self.y_reg_loss:
+				self.y_reg_loss[target] = []
+		else:
+			raise Exception(
+				"Invalid input for label_or_confound: %s" % label_or_confound)
+	def update(self,xs,
+					y_class_loss,
+					y_reg_loss,
+					y_class_adv_loss,
+					target,
+					label_or_confound,
+					y_kl_loss=None,
+					label_m = None,
+					conf_m = None):
+		y_class_loss,y_reg_loss,y_class_adv_loss = \
+			float(y_class_loss),float(y_reg_loss),float(y_class_adv_loss)
+		if any([np.isnan(_) for _ in [y_class_loss,y_reg_loss,y_class_adv_loss]]):
+			raise Exception("NaN loss")
+		if y_kl_loss is not None:
+			y_kl_loss = float(y_kl_loss)
+		if label_m is not None:
+			label_m = float(label_m)
+		if conf_m is not None:
+			conf_m = float(conf_m)
+		self.add_target(target,label_or_confound)
+
+		self.xs[target].append(xs)
+		if label_or_confound == "Labels":
+			self.y_class_loss[target].append(y_class_loss)
+		elif label_or_confound == "Confounds":
+			self.y_reg_loss[target].append(y_reg_loss)
+			self.y_class_adv_loss[target].append(y_class_adv_loss)
+		else:
+			raise Exception("Invalid label_or_confound: %s" % label_or_confound)
+		if y_kl_loss is not None:
+			self.y_kl_loss.append(y_kl_loss)
+		if label_m is not None:
+			self.label_m.append(label_m)
+			self.label_m_xs.append(xs)
+		if conf_m is not None:
+			self.conf_m.append(conf_m)
+			self.conf_m_xs.append(xs)
+	def _get_last_loss(self,d):
+		if len(d) == 0: return 0
+		if all([len(d[_]) == 0 for _ in d]):
+			return 0
+		mtarget = None
+		for target in d:
+			if mtarget is None: mtarget=target
+			else:
+				if self.xs[target][-1] > self.xs[mtarget][-1]:
+					mtarget = target
+		return d[mtarget][-1]
+	
+	def get_last_y_reg_loss(self):
+		return self._get_last_loss(self.y_reg_loss)
+	def get_last_y_kl_loss(self):
+		if len(self.y_kl_loss) == 0: return None
+		return self.y_kl_loss[-1]
+	def get_last_y_class_adv_loss(self):
+		return self._get_last_loss(self.y_class_adv_loss)
+	def get_last_y_class_loss(self):
+		return self._get_last_loss(self.y_class_loss)
+	def get_last_xs(self):
+		return self._get_last_loss(self.xs)
+	def load(self):
+		with open(self.loss_vals_file,'r') as fileobj:
+			state_dict = json.load(fileobj)
+		self.xs = state_dict['xs']
+		self.y_class_adv_loss = state_dict['y_class_adv_loss']
+		self.y_reg_loss = state_dict['y_reg_loss']
+		self.y_kl_loss = state_dict['y_kl_loss']
+		self.y_class_loss = state_dict['y_class_loss']
+		if 'label_m' in state_dict:
+			self.label_m = state_dict['label_m']
+			self.label_m_xs = state_dict['label_m_xs']
+			self.conf_m = state_dict['conf_m']
+			self.conf_m_xs = state_dict['conf_m_xs']
+		
+	def title(self,target):
+		lab = target
+		if lab == "ScanningSequence": lab = "ScanSeq"
+		if lab == "Ages_Buckets": lab = "Ages"
+		if lab == "SexDSC": lab = "Sex"
+		if lab == "MRModality": lab = "MRI type"
+		if lab == "AlzStage": lab = "Dementia"
+		if lab == "ICD_one_G35": lab = "MS"
+		if lab == "ICD_one_G40": lab = "Epilepsy"
+		if lab == "ICD_one_G20": lab = "Parkin."
+		if "_one_" in lab: lab = lab.replace("_one_"," ")
+		return lab
+	def smooth(self,arr):
+		if len(arr) < 200: return arr
+		newarr = np.zeros((len(arr),))
+		for i,v in enumerate(arr):
+			min_i = max(0,i - 100)
+			max_i = min(len(arr)-1,i + 100)
+			newarr[i] = np.mean(arr[min_i:max_i])
+		return newarr
+	def plot(self,smooth=False,log_yscale=False,temptitle=None):
+		plt.clf()
+		fig = plt.figure()
+		ax = plt.subplot()
+		for target in self.y_class_loss:
+			y = self.y_class_loss[target]
+			if smooth:
+				y = self.smooth(y)
+			ax.plot(self.xs[target],y,
+				label="%s (L)" % self.title(target)
+			)
+		for target in self.y_reg_loss:
+			y = self.y_reg_loss[target]
+			if smooth: y = self.smooth(y)
+			p = ax.plot(self.xs[target],
+					y,
+					label = "%s (C)" % self.title(target)
+			)
+			if isinstance(p,list): p = p[0]
+			y = self.y_class_adv_loss[target]
+			if smooth: y = self.smooth(y)
+			ax.plot(self.xs[target],
+				y,
+				c=p.get_color(),
+				linestyle='dashed',
+				label="%s (A)" % self.title(target)
+			)
+		if len(self.y_kl_loss) > 0:
+			y = self.y_kl_loss
+			if smooth: y = self.smooth(y)
+			ax.plot(list(range(len(self.y_kl_loss))),
+				y,
+				label="KL")
+		if len(self.conf_m) > 0:
+			y = self.conf_m
+			if smooth: y = self.smooth(y)
+			ax.plot(self.conf_m_xs,[_  for _ in y],linestyle='dashdot',
+				label="Confound M")
+		if len(self.label_m) > 0:
+			y = self.label_m
+			if smooth: y = self.smooth(y)
+			ax.plot(self.label_m_xs,[_ * -1  for _ in y],linestyle='dashdot',
+				label="Label M")
+		box = ax.get_position()
+		ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+		
+		# Put a legend to the right of the current axis
+		ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+		
+		plt.xlabel("Iterations")
+		if log_yscale:
+			plt.yscale("log")
+			plt.ylabel("log(Loss)")
+		else:
+			plt.ylabel("Loss")
+		if temptitle is not None:
+			plt.savefig(self.loss_image_file.replace(".png",f"{temptitle}.png"),
+				bbox_inches='tight')
+		else:
+			plt.savefig(self.loss_image_file,bbox_inches='tight')
+
+		plt.clf()
+		plt.cla()
+		plt.close(fig)
+		plt.close('all')
+
+	def save(self):
+		state_dict = {
+			'xs':self.xs,
+			'y_class_loss':self.y_class_loss,
+			'y_reg_loss':self.y_reg_loss,
+			'y_class_adv_loss':self.y_class_adv_loss,
+			'y_kl_loss':self.y_kl_loss,
+			'label_m':self.label_m,
+			'label_m_xs':self.label_m_xs,
+			'conf_m':self.conf_m,
+			'conf_m_xs':self.conf_m_xs
+		}
+		with open(self.loss_vals_file,'w') as fileobj:
+			json.dump(state_dict,fileobj)

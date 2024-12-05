@@ -9,12 +9,14 @@ from .Records import BatchRecord
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.cm as cm
 #from pytorch_grad_cam import GradCAMPlusPlus,GradCAM
 from sklearn.metrics import auc,roc_curve
 import glob
 import warnings
 from .utils import resize_np,is_nan
 from adjustText import adjust_text
+from scipy.special import softmax
 
 # Tests either the model directly or the output files
 class MultiInputTester:
@@ -45,26 +47,39 @@ class MultiInputTester:
 		verbose : bool = False,
 		name : str = 'experiment_name',
 		test_name : str = "",
-		include_inds : list = [0,1]):
+		include_inds : list = [0,1],
+		return_confidence : bool = False):
 		
 		self.name=name
 		self.checkpoint_dir=checkpoint_dir
 		self.model = model
+		self.return_confidence = return_confidence
 		self.model_file = os.path.join(
 			self.checkpoint_dir,'%s.pt' % self.name)
 		if os.path.isfile(self.model_file):
-			state_dicts = torch.load(self.model_file)
-			self.model.load_state_dict(state_dicts['model_state_dict'])
+			self.state_dicts = torch.load(self.model_file)
+			if 'model_state_dict' not in self.state_dicts:
+				x = {}
+				x['model_state_dict'] = self.state_dicts
+				self.state_dicts = x
+			if 'encoded_record' in self.state_dicts:
+				self.state_dicts['model_state_dict']['encoded_record'] = self.state_dicts['encoded_record']
+				del self.state_dicts['encoded_record']
+			self.model.load_state_dict(self.state_dicts['model_state_dict'])
+		else:
+			self.state_dicts = None
 		self.model.eval()
 		self.out_record_folder = out_record_folder
 		os.makedirs(self.out_record_folder,exist_ok=True)
 		self.name = name
 		self.test_name = test_name
 		if self.out_record_folder is not None and self.name is not None:
-			self.stats_record = _StatsRecord(
-				os.path.join(self.out_record_folder,"json"),
-				self.name,
-				test_name=self.test_name)
+			self.stats_record = {}
+			for l in self.model.classifiers:
+				self.stats_record[l] = _StatsRecord(
+					os.path.join(self.out_record_folder,"json",l),
+					self.name,
+					test_name=self.test_name)
 		self.pid_records = None
 		self.remove_inds = []
 		self.include_cbar = True
@@ -76,7 +91,14 @@ class MultiInputTester:
 		self.grad_cam_group = {}
 		self.encoding_Xfile_record = None
 		self.encoding_record = None
-	def acc(self,database_key = None,
+	def out_state_dict(self):
+		if self.state_dicts is not None:
+			self.state_dicts['model_state_dict'] = self.model.state_dict()
+			torch.save(self.state_dicts,self.model_file)
+	def record(self,reset=False):
+		for s in self.stats_record:
+			self.stats_record[s].record(reset=reset)
+	def acc(self,target_label,database_key = None,
 						opt = None,
 						divides = None,
 						same_pids_across_groups = False,
@@ -85,16 +107,16 @@ class MultiInputTester:
 						acc_or_auc = "acc",
 						min_pids=1,
 						top_not_mean=False):
-		
+		if "ICD" in target_label: ind = 1
 		if acc_or_auc == "auc":
-			group_dict = self.pid_records.auc(ind=ind,
+			group_dict = self.pid_records[target_label].auc(ind=ind,
 					database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups,
 					min_pids=min_pids,top_not_mean=top_not_mean)
 		elif acc_or_auc == "acc":
-			group_dict = self.pid_records.acc(database_key=database_key,
+			group_dict = self.pid_records[target_label].acc(database_key=database_key,
 					opt=opt,
 					divides=divides,
 					same_pids_across_groups=same_pids_across_groups,
@@ -102,7 +124,8 @@ class MultiInputTester:
 		else:
 			raise Exception("Invalid arg for acc_or_auc: %s" % acc_or_auc)
 		if save:
-			out_json_folder = os.path.join(self.out_record_folder,"json_res")
+			out_json_folder = os.path.join(self.out_record_folder,
+				"json_res",target_label)
 			os.makedirs(out_json_folder,exist_ok=True)
 			database_key_title = database_key.replace("/","_")
 			out_json_file = os.path.join(
@@ -112,6 +135,7 @@ class MultiInputTester:
 				json.dump(group_dict,fileobj,indent=4)
 		return group_dict
 	def plot(self,
+			target_label,
 			ind = 0,
 			x_axis_opts = "images",
 			acc_or_auc = "auc",
@@ -121,8 +145,8 @@ class MultiInputTester:
 			same_pids_across_groups = False,
 			min_pids = 1,
 			do_adjust_text=True,top_not_mean=False):
-		
-		group_set = self.acc(
+		if "ICD" in target_label: ind = 1
+		group_set = self.acc(target_label,
 					database_key = database_key,
 					opt = opt,
 					divides = divides,
@@ -136,6 +160,14 @@ class MultiInputTester:
 			raise NotEnoughPatients("Not enough patients in plot...?")
 		plt.clf()
 		texts = []
+		max_c,min_c = -1 * float('inf'),float('inf')
+		cmap = cm.jet(range(255))
+		for group in group_set:
+			if group is None: continue
+			if group_set[group]["confidence"] == np.nan or group_set[group]["confidence"] is None: continue
+			max_c = max(group_set[group]["confidence"],max_c)
+			min_c = min(group_set[group]["confidence"],min_c)
+		min_c,max_c = 0.8,1.9
 		for group in group_set:
 			if group is None: continue
 			x = group_set[group][acc_or_auc]
@@ -150,11 +182,19 @@ class MultiInputTester:
 			else:
 				y = group_set[group][x_axis_opts]
 				if x_axis_opts == "images": assert(y > 0)
-			plt.scatter(y,x,c='blue',label=group)
+			confidence = group_set[group]["confidence"]
+			if confidence is None or confidence == np.nan: continue
+			confidence = max(min_c,confidence)
+			confidence = min(max_c,confidence)
+			confidence = ((confidence - min_c) / (max_c - min_c))
+			try:
+				plt.scatter(y,x,c=cmap[int(confidence * 254)],label=group,s=100,edgecolors='black')
+			except ValueError:
+				continue
 			if len(group_set) <=15:
 				texts.append(plt.text(y,x,group[:20],fontsize=16))
 			else: do_adjust_text = False
-		out_plot_folder = os.path.join(self.out_record_folder,"plots")
+		out_plot_folder = os.path.join(self.out_record_folder,"plots",target_label)
 		os.makedirs(out_plot_folder,exist_ok=True)
 		database_key_title = database_key.replace("/","_")
 		out_plot_file = os.path.join(
@@ -170,17 +210,21 @@ class MultiInputTester:
 			adjust_text(texts)
 		plt.savefig(out_plot_file)
 
-	def loop(self,pr: BatchRecord,record_encoding=False):
+	def loop(self,pr: BatchRecord,target_label="Folder",record_encoding=False):
 		"""Tests one input and saves it.
 		
 		Args:
 			pr (BatchRecord) : Image batch
 		
 		"""
-		
 		y_pred = self.model(pr,
-			return_regress = True
-			,record_encoding=record_encoding)
+			return_regress = True,
+			target_label=target_label,
+			return_confidence = self.return_confidence,
+			dataloader = self)
+		if self.return_confidence:
+			y_pred,confidence = y_pred
+		else: confidence = None
 		if record_encoding:
 			self.record_encodings(pr.get_X_files())
 		if isinstance(y_pred,tuple):
@@ -188,43 +232,43 @@ class MultiInputTester:
 		else:
 			c_pred = torch.Tensor(np.zeros(y_pred.shape))
 		if pr.batch_by_pid:
-			self.stats_record.update(
-				pr.get_Y(),
+			self.stats_record[target_label].update(
+				pr.get_Y(label=target_label),
 				y_pred,
-				pr.get_C(),
-				c_pred,
 				pr.pid,
 				pr.get_X_files(),
 				age_encode = self.model.encode_age,
 				static_inputs = [] if not self.model.use_static_input \
-					else pr.get_static_inputs()
+					else pr.get_static_inputs(),
+				confidence = confidence
 			)
 		else:
 			for i,im in enumerate(pr.image_records):
-				self.stats_record.update(
-					im.get_Y(),
+				self.stats_record[target_label].update(
+					im.get_Y(label=target_label),
 					y_pred[i,...],
-					im.get_C(),
-					c_pred[i,...],
 					im.get_ID(),
 					im.npy_file,
 					age_encode = self.model.encode_age,
 					static_inputs = [] if not self.model.use_static_input \
-					else pr.get_static_inputs()
+					else pr.get_static_inputs(),
+					confidence = confidence
 				)
 		return
-	def read_json(self):
+	def read_json(self,target_label):
 		"""Reads all json files output by MultiInputTester."""
 		
 		if self.pid_records is None:
-			self.pid_records = _AllRecords(self.database,
+			self.pid_records = {}
+		if target_label not in self.pid_records:
+			self.pid_records[target_label] = _AllRecords(self.database,
 				remove_inds = self.remove_inds,
 				mv_limit = self.mv_limit,
 				include_inds = self.include_inds,
 				name = self.name,
 				verbose = self.verbose)
 		json_files = glob.glob(os.path.join(self.out_record_folder,"json",
-			"*.json"))
+			target_label,"*.json"))
 		for json_file in json_files:
 			try:
 				with open(json_file,'r') as fileobj:
@@ -254,31 +298,37 @@ class MultiInputTester:
 						static_inputs = json_dict[pid][mm]["static_inputs"]
 					else:
 						static_inputs = []
-					self.pid_records.add_record(pid + str(np.argmax(yf)),
+					if "confidence" in json_dict[pid][mm]:
+						confidence = float(np.max(json_dict[pid][mm]["confidence"]))
+					else:
+						confidence = None
+					self.pid_records[target_label].add_record(
+						pid + str(np.argmax(yf)),
 						xf,yf,ypf,self._json_title_parse(json_file),
-						age_encode=age_encode,static_inputs=static_inputs)
+						age_encode=age_encode,static_inputs=static_inputs,
+						confidence = confidence)
 		#if self.same_patients:
 		#	self.pid_records.merge_group_pids()
 
-	def read_encodings(self):
-		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
-		if not os.path.isdir(out_encoding_folder):
-			return
-		out_encoding_file = os.path.join(out_encoding_folder,"encodings.json")
-		if not os.path.isfile(out_encoding_file): return
-		with open(out_encoding_file,'r') as fileobj:
-			self.encoding_record = json.load(fileobj)
-		for X_file in self.encoding_record:
-			self.encoding_record[X_file] = np.array(
-				self.encoding_record[X_file])
+#	def read_encodings(self):
+#		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
+#		if not os.path.isdir(out_encoding_folder):
+#			return
+#		out_encoding_file = os.path.join(out_encoding_folder,"encodings.json")
+#		if not os.path.isfile(out_encoding_file): return
+#		with open(out_encoding_file,'r') as fileobj:
+#			self.encoding_record = json.load(fileobj)
+#		for X_file in self.encoding_record:
+#			self.encoding_record[X_file] = np.array(
+#				self.encoding_record[X_file])
 		
-	def record_encodings(self,X_files):
-		if self.encoding_record is None:
-			self.encoding_record = {}
-		assert(len(X_files) == self.model.saved_encoding.shape[0])
-		for i,X_file in enumerate(X_files):
-			self.encoding_record[X_file] = \
-				np.squeeze(self.model.saved_encoding[i,...])
+#	def record_encodings(self,X_files):
+#		if self.encoding_record is None:
+#			self.encoding_record = {}
+#		assert(len(X_files) == self.model.saved_encoding.shape[0])
+#		for i,X_file in enumerate(X_files):
+#			self.encoding_record[X_file] = \
+#				np.squeeze(self.model.saved_encoding[i,...])
 
 	def save_encodings(self):
 		out_encoding_folder = os.path.join(self.out_record_folder,'encodings')
@@ -382,11 +432,41 @@ class MultiInputTester:
 				os.path.basename(json_file).replace('.json','').split("_")[:-1]
 			)
 
+	def attn_map_vis(self, att_mat : list,X_dim,patch_size=16):
+		if att_mat[0].size()[0] != 1:
+			return [self.attn_map_vis([_[i,:,:,:].unsqueeze(0) for _ in att_mat],X_dim,patch_size)[0] for i in range(att_mat[0].size()[0])]
+		att_mat = torch.stack(att_mat).squeeze(1)
+		# Average the attention weights across all heads.
+		att_mat = torch.mean(att_mat, dim=1)
+		# To account for residual connections, we add an identity matrix to the
+		# attention matrix and re-normalize the weights.
+		residual_att = torch.eye(att_mat.size(1))
+		aug_att_mat = att_mat + residual_att
+		aug_att_mat = aug_att_mat / aug_att_mat.sum(dim=-1).unsqueeze(-1)
+		# Recursively multiply the weight matrices
+		joint_attentions = torch.zeros(aug_att_mat.size())
+		joint_attentions[0] = aug_att_mat[0]
+		
+		for n in range(1, aug_att_mat.size(0)):
+			joint_attentions[n] = torch.matmul(aug_att_mat[n], joint_attentions[n-1])
+		# Attention from the output token to the input space.
+		v = joint_attentions[-1]
+		grid_size = [int(_ / patch_size) for _ in X_dim ]
+		mask = v[0, 1:].reshape(grid_size).detach().numpy()
+	#	mask = resize_np(mask,im.shape)
+	#	#mask = cv2.resize(mask / mask.max(), im.size())[..., np.newaxis]
+	#	result = (mask * im).astype("uint8")
+		return [mask]
+
+
 	def grad_cam(self,pr: BatchRecord,
 		add_symlink: bool = True,
 		grad_layer: int = 7,
 		save : bool = True,
-		database_key : str = None) -> torch.Tensor:
+		database_key : str = None,
+		target_label : str = None,
+		confidence_thresh : float = float('inf'),
+		register : bool = False) -> torch.Tensor:
 		"""Outputs a gradient class activation map for the input record
 		
 		Args:
@@ -401,35 +481,50 @@ class MultiInputTester:
 				("Grad Cam cannot be applied to" + \
 				" multilabel models (Y_dim: %s)") % str(pr.Y_dim))
 		
-		Y = pr.get_Y()
 		
 		#y_pred = self.model(pr.get_X(),dates=pr.get_dates(),bdate=pr.get_bdate(),static_input=pr.get_static_input()grad_eval=True)
-		y_pred = self.model(pr,grad_eval=True)
+		if self.model.vision_transformer:
+			y_pred,attns = self.model(pr,target_label=target_label,output_attentions=True)
+			y_pred,confidence = self.model(pr,target_label=target_label,return_confidence=True)
+			if np.max([_.cpu() for _ in confidence]) > confidence_thresh:
+				print([_.cpu() for _ in confidence])
+				return
+			attns = [a.cpu() for a in attns]
+			t = self.attn_map_vis(attns,pr.image_records[0].X_dim)#pr.get_X())
+			t = [np.expand_dims(a,axis=0) for a in t]
+			t = np.concatenate(t,axis=0)
+			del attns
+			#t = torch.stack(t).cpu().detach().numpy()
+		else:
+			Y = pr.get_Y()
+			
+			y_pred = self.model(pr,target_label=target_label,grad_eval=True)
 		
-		ymax = Y.argmax(dim=2)
+			ymax = Y.argmax(dim=2)
 		
-		y_pred[:,:,ymax].backward()
+			y_pred[:,:,ymax].backward()
 		
-		gradients = self.model.get_activations_gradient()
+			gradients = self.model.get_activations_gradient()
 		
-		# pool the gradients across the channels
-		pooled_gradients = torch.mean(gradients, dim=[2, 3, 4])
+			# pool the gradients across the channels
+			pooled_gradients = torch.mean(gradients, dim=[2, 3, 4])
 		
-		# get the activations of the last convolutional layer
-		activations = self.model.get_activations(pr.get_X()).detach()
+			# get the activations of the last convolutional layer
+			activations = self.model.get_activations(pr.get_X()).detach()
 		
-		# weight the channels by corresponding gradients
-		for j in range(activations.size()[0]):
-			for i in range(activations.size()[1]):
-			    activations[j, i, :, :, :] *= pooled_gradients[j,i]
+			# weight the channels by corresponding gradients
+			for j in range(activations.size()[0]):
+				for i in range(activations.size()[1]):
+				    activations[j, i, :, :, :] *= pooled_gradients[j,i]
 		
-		# average the channels of the activations
-		heatmap = torch.mean(activations, dim=1)
+			# average the channels of the activations
+			heatmap = torch.mean(activations, dim=1)
 		
-		# relu on top of the heatmap
-		# expression (2) in https://arxiv.org/pdf/1610.02391.pdf
+			# relu on top of the heatmap
+			# expression (2) in https://arxiv.org/pdf/1610.02391.pdf
 		
-		t = heatmap.cpu().detach().numpy()
+			t = heatmap.cpu().detach().numpy()
+
 		for i in range(t.shape[0]):
 			im = pr.image_records[i]
 			
@@ -456,15 +551,27 @@ class MultiInputTester:
 			if save:
 				npsqueeze = resize_np(npsqueeze,im.X_dim)
 				out_folder = os.path.join(self.out_record_folder,
-								"grads",im.group_by)
+								"grads",target_label,im.group_by)
 				os.makedirs(out_folder,exist_ok=True)
 				bname = os.path.splitext(os.path.basename(im.npy_file))[0]
 				out_name = f"{bname}_grad.npy"
 				orig_name = f"{bname}_orig.npy"
+				if self.model.vision_transformer:
+					with open(os.path.join(out_folder,f"{bname}_info.txt"),'w') as fileobj:
+						fileobj.write(
+							"Label: %s, Confidence: %f, Y: %s, y_pred: %s" % \
+								(target_label,
+								confidence[i],
+								str(pr.get_Y(label=target_label)),
+								str(y_pred))
+						)
 				np.save(os.path.join(out_folder,out_name),npsqueeze)
 				if add_symlink and not os.path.isfile(
 						os.path.join(out_folder,orig_name)):
 					os.symlink(im.npy_file,os.path.join(out_folder,orig_name))
+			#if register:
+			#	nifti_file = im.filename
+				
 		return t
 	
 	def out_grad_cam_groups(self,prefix=None):
@@ -513,6 +620,7 @@ class _StatsRecord():
 		self.out_conf_record = {}
 		self.all_IDs = None
 		self.out_C = False
+		self.all_confidence = None
 	def get_name(self,out_record_folder,name,test_name):
 		if self.test_name != "":
 			n,ext = os.path.splitext(name)
@@ -524,12 +632,13 @@ class _StatsRecord():
 			num += 1
 		Path(os.path.join(out_record_folder,"%s_%d.json" % (name,num))).touch()
 		return "%s_%d" % (name,num)
-	def update(self,Y,y_pred,C,c_pred,ID,X_files,age_encode=False,static_inputs=[]):
+	def update(self,Y,y_pred,ID,X_files,age_encode=False,static_inputs=[],
+			confidence=None):
 		if torch.is_tensor(Y): Y = Y.cpu().detach().numpy()
 		if torch.is_tensor(y_pred): y_pred = y_pred.cpu().detach().numpy()
-		if torch.is_tensor(C): C = C.cpu().detach().numpy()
-		if torch.is_tensor(c_pred): c_pred = c_pred.cpu().detach().numpy()
-		
+		#if torch.is_tensor(C): C = C.cpu().detach().numpy()
+		#if torch.is_tensor(c_pred): c_pred = c_pred.cpu().detach().numpy()
+		if confidence is not None and torch.is_tensor(confidence[0]): confidence = [ c.cpu().detach().numpy() for c in confidence]
 		self.x_files_read = self.x_files_read.union(set(X_files))
 		self.pids_read.add(ID)
 
@@ -570,6 +679,10 @@ class _StatsRecord():
 							'age_encode' : age_encode,
 							'static_inputs' : [str(_) for _ in list(static_inputs)]
 							})
+		if confidence is not None:
+				self.out_record[ID][-1].update({
+					'confidence' : [float(_) for _ in list(confidence)]
+			})
 		if self.out_C:
 			for l,X_file in enumerate(X_files):
 				if X_file not in self.out_conf_record: self.out_conf_record[X_file] = {}
@@ -625,7 +738,8 @@ class _StatsRecord():
 			json.dump(self.out_record,fileobj,indent=4)
 		if reset:
 			self.out_record = {}
-			self.name = self.get_name(self.out_record_folder,self._name,self.test_name)
+			self.name = self.get_name(self.out_record_folder,
+				self._name,self.test_name)
 		if self.out_C:
 			with open(self.out_record_file_txt,'w') as fileobj:
 				fileobj.write( "%s - # files: %d; num patients: %d; %s; %s" % \
@@ -645,10 +759,12 @@ class _FileRecord:
 				database,
 				age_encode=False,
 				static_inputs=[],
-				remove_inds=[]):
+				remove_inds=[],
+				confidence : float = None):
 		self.X_files = sorted(X_files)
 		self.pid=pid #+ str(np.argmax(Y))
 		self.Y = np.array(Y)
+		self.confidence = confidence
 		if len(self.Y.shape) == 1:
 			self.Y = np.expand_dims(self.Y,axis=0)
 		self.y_pred = np.array(y_pred)
@@ -666,7 +782,8 @@ class _FileRecord:
 						divides = None):
 		"""Returns the group the file belongs to
 		"""
-		
+		if len(self.static_inputs) == 0 or not self.age_encode: return None
+		if self.confidence is not None and self.confidence > 1.125: return None
 		if opt is None:
 			return "all"
 		elif opt == "name_num":
@@ -759,6 +876,7 @@ class _FileRecord:
 		"""
 		ftypes = self._get_group_set(database_key)
 		if len(ftypes) == 0: return None # or len(ftypes) > 2: return None
+		#if len(ftypes) > 1: return None
 		return "\n".join(sorted(list(ftypes)))
 		
 	def get_acc(self):
@@ -785,7 +903,8 @@ class _PIDRecord:
 			Y,
 			y_pred,
 			age_encode=False,
-			static_inputs=[]):
+			static_inputs=[],
+			confidence=None):
 		f = _FileRecord(
 				X_files,
 				Y,
@@ -794,7 +913,8 @@ class _PIDRecord:
 				self.database,
 				age_encode = age_encode,
 				static_inputs = static_inputs,
-				remove_inds = self.remove_inds)
+				remove_inds = self.remove_inds,
+				confidence=confidence)
 		self.file_records.append(f)
 	
 	def get_group_dict(self,
@@ -827,9 +947,9 @@ class _PIDRecord:
 						top_not_mean = False,
 						mv_limit = 0.0):
 		
-		group_dict = self.get_group_dict(database_key = None,
-										opt = None,
-										divides = None)
+		group_dict = self.get_group_dict(database_key = database_key,
+										opt = opt,
+										divides = divides)
 		if group not in group_dict:
 			return -1
 		else:
@@ -923,7 +1043,8 @@ class _AllRecords:
 			y_pred,
 			group,
 			age_encode=False,
-			static_inputs=[]):
+			static_inputs=[],
+			confidence : float = None):
 
 		if pid not in self.pid_records:
 			self.pid_records[pid] = _PIDRecord(pid,
@@ -934,7 +1055,8 @@ class _AllRecords:
 						Y,
 						y_pred,
 						age_encode=age_encode,
-						static_inputs=static_inputs)
+						static_inputs=static_inputs,
+						confidence = confidence)
 	
 	# Makes it so that this only outputs records of the same set of patients for
 	# all considered modalities
@@ -1024,12 +1146,19 @@ class _AllRecords:
 				assert(len(filerec.Y.shape) == 2)
 				assert(len(filerec.y_pred.shape) == 2)
 				if filerec.pid not in group_stat[group]:
-					group_stat[group][filerec.pid] = (filerec.Y,filerec.y_pred,1,set(filerec.X_files))
+					group_stat[group][filerec.pid] = (filerec.Y,
+						filerec.y_pred,
+						1,
+						set(filerec.X_files),
+						filerec.confidence)
 				elif not top_not_mean:
-					Y_all,y_pred_all,image_count,image_set = group_stat[group][filerec.pid]
+					Y_all,y_pred_all,image_count,image_set,all_confidence = \
+						group_stat[group][filerec.pid]
 					group_stat[group][filerec.pid] = (filerec.Y+Y_all,
 											filerec.y_pred+y_pred_all,
-											image_count+1,image_set.union(set(filerec.X_files)))
+											image_count+1,
+											image_set.union(set(filerec.X_files)),
+											filerec.confidence+all_confidence)
 				
 
 		# Mean by patient ID
@@ -1043,10 +1172,11 @@ class _AllRecords:
 			if same_pids_across_groups:
 				assert(len(group_stat[group]) >= min_pids)
 			for pid in group_stat[group]:
-				Y_all,y_pred_all,imc,image_set = group_stat[group][pid]
+				Y_all,y_pred_all,imc,image_set,m_conf = group_stat[group][pid]
 				if Y_all_group is None:
 					Y_all_group = Y_all / imc
 					y_all_pred_group = y_pred_all / imc
+					m_conf_group = [m_conf / imc]
 				else:
 					Y_all_group = np.concatenate(
 						(Y_all_group,Y_all / imc),
@@ -1054,6 +1184,7 @@ class _AllRecords:
 					y_all_pred_group = np.concatenate(
 						(y_all_pred_group,y_pred_all / imc),
 						axis=0)
+					m_conf_group.append(m_conf / imc)
 				assert(len(Y_all.shape) == 2)
 				assert(len(y_pred_all.shape) == 2)
 				patient_count += 1
@@ -1066,7 +1197,8 @@ class _AllRecords:
 			group_stat[group] = (Y_all_group,
 								y_all_pred_group,
 								len(image_sets),
-								patient_count)
+								patient_count,
+								m_conf_group)
 		
 		return group_stat
 	
@@ -1096,14 +1228,29 @@ class _AllRecords:
 						min_pids=min_pids,top_not_mean=top_not_mean)
 		group_aucs = {}
 		for group in group_stat:
-			Ys,y_preds,image_count,patient_count = group_stat[group]
+			Ys,y_preds,image_count,patient_count,m_confidence = group_stat[group]
+
+			Ys = np.array(Ys)                                                                
+			col_sel = np.zeros((Ys.shape[1],),dtype=bool)                                    
+			col_sel = np.any(Ys,axis=0)                                                      
+			if col_sel[2]: col_sel[0] = False                                                
+			col_sel[-1] = False
+			if np.sum(col_sel) != 2:
+				continue
+			assert(np.sum(col_sel) == 2)
+			Ys = Ys[:,col_sel]
+			y_preds = np.array(y_preds)[:,col_sel]
+
+			y_preds = softmax(np.array(y_preds),axis=1)
+			
 			with warnings.catch_warnings():
 				warnings.simplefilter("ignore")
 				fpr, tpr, thresholds = roc_curve(Ys[:,ind], y_preds[:,ind])
 				auc_ = auc(fpr,tpr)
 				group_aucs[group] = {"auc": auc_,
 									"images":image_count,
-									"patients":patient_count}
+									"patients":patient_count,
+									"confidence":np.mean(m_confidence)}
 		return group_aucs
 	
 	def acc(self,
@@ -1136,12 +1283,13 @@ class _AllRecords:
 						top_not_mean=top_not_mean)
 		group_accs = {}
 		for group in group_stat:
-			Ys,y_preds,image_count,patient_count = group_stat[group]
+			Ys,y_preds,image_count,patient_count,m_confidence = group_stat[group]
 			acc = np.mean(np.argmax(Ys,axis=1) == np.argmax(y_preds,axis=1))
 			
 			group_accs[group] = {"acc":acc,
 								"images":image_count,
-								"patients":patient_count}
+								"patients":patient_count,
+								"confidence":m_confidence}
 		assert(group_accs is not None)
 		return group_accs
 	
@@ -1150,16 +1298,19 @@ class _AllRecords:
 		Ys= []
 		y_preds = []
 		n_images_total = 0
+		confs = []
 		for pid in self.group_pid_sets[group]:
 			pid_record = self.pid_records[pid]
 			val = pid_record.get_mean_group(group,top_not_mean=top_not_mean,
 				mv_limit=mv_limit)
 			if val == -1: continue
-			y_,yp_,n_images = val
+			y_,yp_,n_images,m_conf_ = val
 			Ys.append(y_)
 			y_preds.append(yp_)
+			confs.append(m_conf_)
 			n_images_total += n_images
 		Ys = np.array(Ys)
+		confs = np.array(confs)
 		y_preds = np.array(y_preds)
 		if len(Ys.shape) < 2: return -1
 		if len(Ys.shape) < 2:
@@ -1168,6 +1319,7 @@ class _AllRecords:
 		#for i in range(Ys.shape[1]):
 		Ys = Ys[:,self.include_inds]
 		y_preds = y_preds[:,self.include_inds]
+		
 		if self.verbose:
 			print("---")
 			print("Ys.shape: %s" %  str(Ys.shape))
@@ -1197,7 +1349,7 @@ class _AllRecords:
 				c += 1
 		if c == 0: return -1
 		mean_auc = mean_auc / c
-		return mean_auc,tot_n_patients,n_images_total,np.mean(Ys[:,0])
+		return mean_auc,tot_n_patients,n_images_total,np.mean(Ys[:,0]),np.mean(confs)
 	def get_group_acc(self,group,top_not_mean=False,mv_limit=0.5):
 		assert(group in self.group_set)
 		Ys= []

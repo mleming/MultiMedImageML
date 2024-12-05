@@ -47,7 +47,6 @@ class MedImageLoader:
 		batch_by_pid (bool): Whether to batch images together by their Patient ID in a BatchRecord or not (default False)
 		file_record_name (str): Path of the record of files that were read in by the MedImageLoader, if it needs to be examined later (default None)
 		channels_first (bool): Whether to put channels in the first or last dimension of images (default True)
-		save_ram (bool): Clears images from ImageRecords and applies garbage collection frequently to save RAM. Useful for very large datasets (default True)
 		static_inputs (list): List of variables from DataBaseWrapper that will be input as static, per-patient text inputs (like Sex of Ethnicity) to the MultiInputModule (default None)
 		val_ranges (dict): Dictionary that may be used to indicate ranges of values that may be loaded in. So, if you want to only study males, val_ranges could be {'SexDSC':'MALE'}, and of you only wanted to study people between ages 30 and 60, val_ranges could be {'Ages':(30,60)}; these can be combined, too. Note that 'Ages' and 'SexDSC' must be present in DataBaseWrapper as metadata variable names for this to work (default {})
 		match_confounds (list): Used to apply data matching between the labels. So, if you wanted to distinguish between AD and Controls and wanted to match by age, match_confounds could be set to ['Ages'] and this would only return sets of AD and Control of the same age ranges. Note that this may severely limit the dataset or even return nothing if the match_confound variable and the label variable are mutually exclusive (default [])
@@ -65,7 +64,6 @@ class MedImageLoader:
 			database = None,
 			batch_size = 14,
 			X_dim = (96,96,96),
-			get_encoded = False,
 			static_inputs = None,
 			confounds = [],
 			match_confounds = [],
@@ -78,7 +76,6 @@ class MedImageLoader:
 			return_obj = False,
 			channels_first = True,
 			gpu_ids = "",
-			save_ram = True,
 			precedence = [],
 			n_dyn_inputs=14,
 			verbose = False):
@@ -90,7 +87,6 @@ class MedImageLoader:
 		self.cache = cache
 		self.pandas_cache = pandas_cache
 		self.val_ranges = val_ranges
-		self.get_encoded = get_encoded
 		self.batch_by_pid = batch_by_pid
 		self.file_list_dict = {}
 		self.static_inputs = static_inputs
@@ -100,7 +96,6 @@ class MedImageLoader:
 		self.C_dim = C_dim
 		self.mode = None
 		self.gpu_ids = gpu_ids
-		self.save_ram = save_ram
 		self.n_dyn_inputs = n_dyn_inputs
 		self.verbose = verbose
 		
@@ -114,10 +109,12 @@ class MedImageLoader:
 		# them
 		self.zero_data_list = []
 		self.match_confounds = match_confounds
+		self.batch_size_hidden = batch_size
 		if self.batch_by_pid:
 			self.batch_size = 1
 		else:
 			self.batch_size = batch_size
+			
 		self.return_obj = return_obj
 		
 		# Create or read in the image database
@@ -168,21 +165,58 @@ class MedImageLoader:
 		self.file_list_dict = {}
 	
 		# Switch stack variables
+		self.stack = "Labels"
+		self.stack_hidden = "Confounds"
 		self.file_list_dict_hidden = {}
 		self.match_confounds_hidden = []
 		self.mode_hidden = "iterate"
+		self.batch_by_pid_hidden = False
+		self.return_obj_hidden = True
 		if self._return_labels():
 			for l in self.label:
 				if l not in self.val_ranges:
 					self.match_confounds_hidden.append(l)
-		self.index = 0
+		self.index = {}
+		self.abs_index = 0
 		if self.verbose:
 			print("Loading image stack")
 		self.load_image_stack()
-		
+	def get_index(self):
+		t = self.tl()
+		if t not in self.index:
+			self.index[t] = 0
+		return self.index[t]
+	def get_abs_index(self):
+		return self.abs_index
+	def index_plus(self):
+		t = self.tl()
+		if t not in self.index:
+			self.index[t] = 0
+		self.index[t] = self.index[t] + 1
+		self.abs_index += 1
+	def index_zero(self):
+		t = self.tl()
+		self.index[t] = 0
+	def switch_stack(self):
+		if self.verbose:
+			print("Switching stack")
+		self.label,self.rmatch_confounds = self.rmatch_confounds,self.label
+		self.file_list_dict,self.file_list_dict_hidden = \
+			self.file_list_dict_hidden,self.file_list_dict
+		self.match_confounds,self.match_confounds_hidden = \
+			self.match_confounds_hidden,self.match_confounds
+		self.mode,self.mode_hidden = self.mode_hidden,self.mode
+		self.batch_by_pid,self.batch_by_pid_hidden = \
+			self.batch_by_pid_hidden,self.batch_by_pid
+		self.return_obj,self.return_obj_hidden = \
+			self.return_obj_hidden,self.return_obj
+		self.stack,self.stack_hidden = self.stack_hidden,self.stack
+		self.batch_size,self.batch_size_hidden = \
+			self.batch_size_hidden,self.batch_size
 	def build_pandas_database(self):
 		"""Builds up the entire Pandas DataFrame from the filesystem in one go.
 		May take a while."""
+		
 		if self.verbose:
 			print("Building pandas database")
 		assert(self.database is not None)
@@ -208,9 +242,12 @@ class MedImageLoader:
 		self.all_records.clear_images()
 		self.database.out_dataframe()
 		self.mode = old_mode
+	
 	def _pickle_input(self):
+	
 		return len(self.image_folders) == 1 and \
 			os.path.splitext(self.image_folders[0])[1] == ".pkl"
+	
 	def tl(self):
 		"""Top label"""
 		
@@ -286,7 +323,7 @@ class MedImageLoader:
 	def load_image_stack(self):
 		"""Loads a stack of images to an internal queue"""
 		
-		self.all_records.check_mem()
+		#self.all_records.check_mem()
 		if self.tl() not in self.file_list_dict:
 			self.file_list_dict[self.tl()] = []
 		X_files = self._load_list_stack()
@@ -353,15 +390,6 @@ class MedImageLoader:
 		self.label = self.label[1:] + [self.label[0]]
 		while self.label[0] in self.zero_data_list:
 			self.label = self.label[1:] + [self.label[0]]
-	def switch_stack(self):
-		if self.verbose:
-			print("Switching stack")
-		self.label,self.rmatch_confounds = self.rmatch_confounds,self.label
-		self.file_list_dict,self.file_list_dict_hidden = \
-			self.file_list_dict_hidden,self.file_list_dict
-		self.match_confounds,self.match_confounds_hidden = \
-			self.match_confounds_hidden,self.match_confounds
-		self.mode,self.mode_hidden = self.mode_hidden,self.mode
 	def __next__(self):
 		if self.verbose:
 			print("self.tl(): %s" % self.tl())
@@ -371,18 +399,17 @@ class MedImageLoader:
 
 		if len(self) == 0:
 			self.load_image_stack()
-		if self.index > len(self):
+		if self.get_index() > len(self):
 			self.database.out_dataframe()
-			self.index = 0
-			self.rotate_labels()
+			self.index_zero()
 			self.load_image_stack()
 			raise StopIteration
 		# Temporary measure
-		if self.index % 500 == 0 and self.index != 0:
+		if (self.get_abs_index()) % 250 == 0 and (self.get_abs_index()) != 0:
 			self.all_records.check_mem()
 		temp = []
 		for i in range(self.batch_size):
-			b = self.index % len(self.file_list_dict[self.tl()])
+			b = self.get_index() % len(self.file_list_dict[self.tl()])
 			img = None
 			if len(self.file_list_dict[self.tl()][b]) == 0: continue
 			for j in range(len(self.file_list_dict[self.tl()][b])):
@@ -393,9 +420,10 @@ class MedImageLoader:
 					if self.cache: assert self.database is not None
 					img = im.get_X(augment=self.augment)
 					temp.append(im)
-					self.index += 1
+					self.index_plus()
 					break
 				except (ImageFileError, ValueError) as e:
+					print("Error")
 					self.file_list_dict[self.tl()][b] = \
 						self.file_list_dict[self.tl()][b][1:]
 					continue
@@ -428,6 +456,7 @@ class MedImageLoader:
 			return 0
 		else:
 			return l * max([len(_) for _ in self.file_list_dict[self.tl()]])
+			#return max([sum([len(_) for _ in self.file_list_dict[lab]]) for lab in self.file_list_dict])
 	def __iter__(self):
 		return self
 	def name(self):
