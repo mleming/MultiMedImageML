@@ -522,8 +522,8 @@ class MultiInputModule(nn.Module):
 				weights: str = None,
 				grad_layer: int = 7,
 				verbose : bool = False,
-				static_dropout: bool = True,
-				vision_transformer: bool = False): # Randomly drops static inputs and age encoding when training
+				static_dropout: bool = True, # Randomly drops static inputs and age encoding when training
+				vision_transformer: bool = False):
 		super(MultiInputModule,self).__init__()
 		
 		# Model Parameters

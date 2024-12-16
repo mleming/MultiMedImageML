@@ -43,7 +43,7 @@ class MultiInputTrainer:
 		name = 'experiment_name',
 		verbose = False,
 		save_latest_freq = 100,
-		return_lim = True,
+		return_lim = False,
 		discriminator_optimizer='adam',
 		classifier_optimizer='adam',
 		forget_optimizer_state = False,
@@ -186,8 +186,12 @@ class MultiInputTrainer:
 		
 		self.reset_time()
 		x = self.model(pr,return_encoded=True)
+		if self.model.variational:
+			z = self.model.z_mean_
+		else:
+			z = x
 		label_m_x_all,conf_m_x_all,label_m_o_all,conf_m_o_all = \
-			self.model.euclidean(self.model.z_mean_.clone().detach().cpu().numpy(),
+			self.model.euclidean(z.clone().detach().cpu().numpy(),
 								pr.get_X_files(),
 								dataloader = self.dataloader,
 								n_mean=256,
@@ -203,28 +207,17 @@ class MultiInputTrainer:
 			torch.tensor(conf_m_x_all,device=self.model.device),\
 			torch.tensor(label_m_o_all,device=self.model.device),\
 			torch.tensor(conf_m_o_all,device=self.model.device)
-		mean_lx = (self.model.z_mean_ - label_m_x_all).pow(2).mean(1)
-		mean_lo = (self.model.z_mean_ - label_m_o_all).pow(2).mean(1)
-		mean_cx = (self.model.z_mean_ - conf_m_x_all).pow(2).mean(1)
-		mean_co = (self.model.z_mean_ - conf_m_o_all).pow(2).mean(1)
-		#print("self.model.z_mean_.size()")
-		#print(self.model.z_mean_.size())
-		#print("label_m_x_all.size()")
-		#print(label_m_x_all.size())
-		#mean_lx = (self.model.z_mean_ - label_m_x_all).pow(2).mean(1)
-		#print("mean_lx.size()")
-		#print(mean_lx.size())
+		
+		mean_lx = (z - label_m_x_all).pow(2).mean(1)
+		mean_lo = (z - label_m_o_all).pow(2).mean(1)
+		mean_cx = (z - conf_m_x_all).pow(2).mean(1)
+		mean_co = (z - conf_m_o_all).pow(2).mean(1)
 		if self.use_triplet:
 			triplet_loss_l,triplet_loss_c = self.model.triplet_all(x,pr.get_X_files(),
 										dataloader = self.dataloader,
 										record_only = not self.update_classifier)
 		else:
 			triplet_loss_l,triplet_loss_c = torch.tensor(0.0),torch.tensor(0.0)
-		#self.label_m = triplet_loss_l
-		#self.conf_m  = triplet_loss_c
-		#mean_co = (self.model.z_mean_ - conf_m_o_all).pow(2).mean(1)
-		#mean_co = torch.max(torch.zeros(mean_co.size(),
-		#			device=self.model.device), mean_co - 0.2)
 
 		self.label_m =  (mean_lx - mean_lo).mean()
 		self.conf_m =  (mean_co - mean_cx).mean()
@@ -271,7 +264,7 @@ class MultiInputTrainer:
 										return_lim=self.return_lim,
 										confound=self.dataloader.tl())
 				if c_dud.size() != y_reg.size():
-					
+					print(self.return_lim)
 					print(c_dud.size()) # 1,32
 					print(y_reg.size()) # 1,1
 				assert(c_dud.size() == y_reg.size())

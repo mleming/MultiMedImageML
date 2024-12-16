@@ -210,7 +210,7 @@ class MultiInputTester:
 			adjust_text(texts)
 		plt.savefig(out_plot_file)
 
-	def loop(self,pr: BatchRecord,target_label="Folder",record_encoding=False):
+	def loop(self,pr: BatchRecord,target_label=None,record_encoding=False):
 		"""Tests one input and saves it.
 		
 		Args:
@@ -231,6 +231,8 @@ class MultiInputTester:
 			y_pred,c_pred = y_pred
 		else:
 			c_pred = torch.Tensor(np.zeros(y_pred.shape))
+		if target_label is None and len(self.model.classifiers) == 1:
+			for _ in self.model.classifiers: target_label = _
 		if pr.batch_by_pid:
 			self.stats_record[target_label].update(
 				pr.get_Y(label=target_label),

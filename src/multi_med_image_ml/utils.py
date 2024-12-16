@@ -16,6 +16,7 @@ from platformdirs import user_cache_dir
 import urllib.request
 from typing import Callable
 platform_system = platform.system()
+#from general_class_balancer import class_balance
 
 # Used to get a training set with equal distributions of input covariates
 # Can also be used to only have certain ranges of continuous covariates,
@@ -86,6 +87,7 @@ def compile_dicom_folder(dicom_folder: str,db_builder=None):
 		if platform_system == "Windows":
 			os.system('dcm2niix *.dcm 2> nul')
 		else:
+			#os.system('dcm2niix *.dcm')
 			os.system('dcm2niix *.dcm >/dev/null 2>&1')
 		os.chdir(cwd)
 	else:
@@ -447,6 +449,7 @@ def resize_np(nifti_data,dim):
 		nifti_data = ndimage.zoom(nifti_data,zp)
 	return nifti_data
 
+"""
 # Prime number functions used in the data matching schemes
 def prime(i, primes):
 	for prime in primes:
@@ -473,7 +476,8 @@ def discretize_value(v,buckets):
 	else:
 		return np.searchsorted(buckets,v)
 	assert(False)
-
+"""
+"""
 # This method uses prime numbers to speed up datapoint matching. Each bucket
 # gets a prime number, and each datapoint is assigned a product of these primes.
 # These are then matched with one another.
@@ -503,7 +507,8 @@ def get_prime_form(confounds,n_buckets,sorted_confounds = None):
 			d = n_primes[int(np.sum(n_buckets[:i])) + d]
 			discretized_confounds[i,j] = d
 	return discretized_confounds
-
+"""
+"""
 # Given buckets, selects values that fall into each one
 def get_class_selection(classes,primed,unique_classes=None):
 	assert(len(classes) == len(primed))
@@ -547,7 +552,7 @@ def multi_mannwhitneyu(arr):
 			if p < min_p:
 				min_p = p
 	return min_p,max_p
-
+"""
 def test_all(classes,confounds):
 	unique_classes = np.unique(classes)
 	all_min_p = np.Inf
@@ -558,7 +563,7 @@ def test_all(classes,confounds):
 			if min_p < all_min_p:
 				all_min_p = min_p
 	return all_min_p
-
+"""
 def integrate_arrs(S1,S2):
 	assert(len(S1) >= len(S2))
 	assert(np.sum(~S1) == len(S2))
@@ -587,7 +592,9 @@ def integrate_arrs_none(S1,S2):
 			i2 += 1
 		i += 1
 	return output
+"""
 
+"""
 # Returns a boolean array that is true if either classes or confounds has a None
 # or NaN value anywhere at the given index
 def get_none_array(classes=None,confounds=None):
@@ -605,7 +612,7 @@ def get_none_array(classes=None,confounds=None):
 		for j in range(confounds.shape[0]):
 			if not has_none[i]: has_none[i] = is_nan(confounds[j,i])
 	return has_none
-
+"""
 
 # Main function. Takes as input classes (as integers starting from 0 in a 1D
 # numpy array) and confounds (as floats and strings, or just objects, in a
@@ -616,7 +623,7 @@ def get_none_array(classes=None,confounds=None):
 # be up to snuff.
 # Method returns an array of logicals that selects a subset of the given data,
 # also forcing equal ratios between each class.
-
+"""
 def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,unique_classes = None):
 	classes = np.array(classes)
 	confounds = np.array(confounds)
@@ -693,7 +700,7 @@ def class_balance(classes,confounds,plim = 0.05,recurse=True,exclude_none=True,u
 		assert(len(selection) == len(has_none))
 		assert(np.sum(~has_none) == len(classes))
 	return selection
-
+"""
 def separate_set(selections,set_divisions = [0.5,0.5],IDs=None):
 	assert(isinstance(set_divisions,list))
 	set_divisions = [i/np.sum(set_divisions) for i in set_divisions]
@@ -799,7 +806,7 @@ def get_multilabel_acc(y_pred,Y):
 	#acc = np.argmax(np.squeeze(y_pred),axis=1) == np.argmax(Y,axis=1),axis=1)
 	return (y_pred > 0.5) == (Y > 0.5)
 	#return acc
-
+"""
 def bucketize(arr,n_buckets):
 	non_arr_list = []
 	max_ = -np.Inf
@@ -828,7 +835,7 @@ def bucketize(arr,n_buckets):
 					bucketized_list[i] = str(j)
 					break
 	return bucketized_list
-
+"""
 # Method to be implemented for determining whether or not a partition of a given
 # distance array is random
 import networkx as nx
@@ -1123,7 +1130,7 @@ def get_data_from_filenames(filename_list,test_variable=None,confounds=None,
 		return X,Y
 
 from copy import deepcopy as copy
-
+"""
 def recompute_selection_ratios(selection_ratios,selection_limits,N):
 	new_selection_ratios = copy(selection_ratios)
 	assert(np.any(np.isinf(selection_limits)))
@@ -1263,7 +1270,7 @@ def get_balanced_filename_list(test_variable,confounds_array,
 		X_files[i] = X_files[i][rr]
 		Y_files[i] = Y_files[i][rr]
 	return X_files,Y_files
-
+"""
 def YC_conv(Y,C,y_weight):
 	Y = np.reshape(Y,(Y.shape[0],1,Y.shape[1]))
 	Y_ = Y

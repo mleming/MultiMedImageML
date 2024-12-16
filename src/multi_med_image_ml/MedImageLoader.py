@@ -14,6 +14,7 @@ import nibabel as nb
 from nibabel.filebasedimages import *
 from .Records import BatchRecord,ImageRecord,AllRecords
 from .DataBaseWrapper import DataBaseWrapper
+from general_class_balancer.general_class_balancer import get_balanced_filename_list
 
 # Translates a filename to a key and back, for storing files as keys in the
 # pandas dataframe. By default, the keys are the full filepaths. This function
@@ -72,7 +73,7 @@ class MedImageLoader:
 			val_ranges = {},
 			dtype="torch",
 			Y_dim = (1,32),
-			C_dim = (16,32),
+			C_dim = (1,32),
 			return_obj = False,
 			channels_first = True,
 			gpu_ids = "",
@@ -258,8 +259,7 @@ class MedImageLoader:
 		return tl
 	
 	def get_file_list(self):
-		
-		
+
 		if self._pickle_input() and self.tl() == "Folder":
 			return [[str(_) for _ in self.database.get_file_list()]]
 		if self.mode == "iterate":
